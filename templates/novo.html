@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novo Abordado</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" rel="stylesheet">
+    <style>
+        .profile-upload {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 2px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+            margin: 0 auto 20px;
+            position: relative;
+        }
+        .profile-upload img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+        .profile-upload i {
+            font-size: 3rem;
+            color: #ccc;
+        }
+        .profile-upload:hover {
+            border-color: #0d6efd;
+        }
+        .profile-upload:hover i {
+            color: #0d6efd;
+        }
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .photo-preview {
+            width: 100%;
+            padding-bottom: 100%;
+            position: relative;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .photo-preview img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .photo-preview .remove-photo {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            padding: 5px;
+            cursor: pointer;
+            z-index: 1;
+        }
+        #cropperModal .modal-body {
+            max-height: 70vh;
+            padding: 0;
+            background-color: #333;
+        }
+        #cropperModal img {
+            max-width: 100%;
+            max-height: 70vh;
+        }
+        .cropper-view-box,
+        .cropper-face {
+            border-radius: 50%;
+        }
+        .cropper-toolbar {
+            padding: 1rem;
+            text-align: center;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+        .cropper-toolbar button {
+            margin: 0 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2 class="mb-4">Cadastrar Novo Abordado</h2>
+        
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.csrf_token }}
+            
+            <!-- Foto de Perfil -->
+            <div class="mb-4 text-center">
+                <label class="profile-upload" for="foto_perfil">
+                    <img id="profile-preview" alt="Preview da foto de perfil">
+                    <i class="fas fa-user-circle"></i>
+                    <input type="file" id="foto_perfil" name="foto_perfil" accept="image/*" capture="user" style="display: none;">
+                </label>
+                <small class="text-muted d-block">Clique para adicionar uma foto de perfil</small>
+            </div>
+
+            <!-- Informações Pessoais -->
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    {{ form.nome.label(class="form-label") }}
+                    {{ form.nome(class="form-control") }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ form.nascimento.label(class="form-label") }}
+                    {{ form.nascimento(class="form-control", type="text", inputmode="numeric", placeholder="DD/MM/AAAA") }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    {{ form.mae.label(class="form-label") }}
+                    {{ form.mae(class="form-control") }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ form.pai.label(class="form-label") }}
+                    {{ form.pai(class="form-control") }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    {{ form.rg.label(class="form-label") }}
+                    {{ form.rg(class="form-control") }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ form.cpf.label(class="form-label") }}
+                    {{ form.cpf(class="form-control") }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    {{ form.telefone.label(class="form-label") }}
+                    {{ form.telefone(class="form-control") }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ form.endereco.label(class="form-label") }}
+                    {{ form.endereco(class="form-control") }}
+                </div>
+            </div>
+
+            <!-- Seção de Veículos -->
+            <div class="mb-4">
+                <h4 class="mb-3">Veículos (Opcional)</h4>
+                <div id="veiculos-container">
+                    <!-- Template para veículo -->
+                    <div class="veiculo-item mb-3 p-3 border rounded">
+                        <div class="row">
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Marca</label>
+                                <input type="text" name="veiculo_marca[]" class="form-control">
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Modelo</label>
+                                <input type="text" name="veiculo_modelo[]" class="form-control">
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Cor</label>
+                                <input type="text" name="veiculo_cor[]" class="form-control">
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Placa</label>
+                                <input type="text" name="veiculo_placa[]" class="form-control">
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-danger btn-sm mt-2" onclick="removerVeiculo(this)">
+                            <i class="fas fa-trash"></i> Remover Veículo
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-outline-primary" onclick="adicionarVeiculo()">
+                    <i class="fas fa-plus"></i> Adicionar Veículo
+                </button>
+            </div>
+
+            <!-- Fotos Adicionais -->
+            <div class="mb-3">
+                <label class="form-label">Fotos Adicionais</label>
+                {{ form.fotos(class="form-control", multiple=True, accept="image/*") }}
+                <div id="photos-preview" class="photos-grid mt-2"></div>
+            </div>
+
+            <div class="mb-3">
+                {{ form.anotacoes.label(class="form-label") }}
+                {{ form.anotacoes(class="form-control", rows="3") }}
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                {% if return_to == 'nova_abordagem' %}
+                    <a href="{{ url_for('nova_abordagem') }}" class="btn btn-secondary">Cancelar</a>
+                {% else %}
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancelar</a>
+                {% endif %}
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Modal para Cropper -->
+    <div class="modal fade" id="cropperModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Ajustar Foto de Perfil</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <img id="cropperImage" src="" alt="Imagem para recortar">
+                </div>
+                <div class="cropper-toolbar">
+                    <button type="button" class="btn btn-outline-secondary" onclick="rotateCropper(-90)">
+                        <i class="fas fa-undo"></i> Girar Esquerda
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="rotateCropper(90)">
+                        <i class="fas fa-redo"></i> Girar Direita
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="cropImage()">
+                        <i class="fas fa-crop"></i> Recortar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <script>
+        let cropper;
+        const modal = new bootstrap.Modal(document.getElementById('cropperModal'));
+        const cropperImage = document.getElementById('cropperImage');
+        const preview = document.getElementById('profile-preview');
+        const icon = document.querySelector('.profile-upload i');
+        let originalFile;
+
+        // Preview da foto de perfil
+        document.getElementById('foto_perfil').addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                originalFile = this.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    cropperImage.src = e.target.result;
+                    modal.show();
+                    
+                    // Inicializa o Cropper quando o modal é mostrado
+                    modal._element.addEventListener('shown.bs.modal', function() {
+                        if (cropper) {
+                            cropper.destroy();
+                        }
+                        cropper = new Cropper(cropperImage, {
+                            aspectRatio: 1,
+                            viewMode: 1,
+                            dragMode: 'move',
+                            autoCropArea: 1,
+                            restore: false,
+                            guides: true,
+                            center: true,
+                            highlight: false,
+                            cropBoxMovable: false,
+                            cropBoxResizable: false,
+                            toggleDragModeOnDblclick: false
+                        });
+                    }, { once: true });
+                }
+                
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+
+        function rotateCropper(degree) {
+            if (cropper) {
+                cropper.rotate(degree);
+            }
+        }
+
+        function cropImage() {
+            if (cropper) {
+                const canvas = cropper.getCroppedCanvas({
+                    width: 400,
+                    height: 400
+                });
+                
+                preview.src = canvas.toDataURL();
+                preview.style.display = 'block';
+                icon.style.display = 'none';
+                
+                // Converter o canvas para Blob
+                canvas.toBlob(function(blob) {
+                    // Criar um novo arquivo com o blob
+                    const croppedFile = new File([blob], originalFile.name, {
+                        type: 'image/jpeg',
+                        lastModified: new Date().getTime()
+                    });
+                    
+                    // Criar um novo FileList com o arquivo recortado
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(croppedFile);
+                    document.getElementById('foto_perfil').files = dataTransfer.files;
+                }, 'image/jpeg');
+                
+                modal.hide();
+            }
+        }
+
+        // Preview das fotos adicionais
+        document.getElementById('fotos').addEventListener('change', function(e) {
+            const previewContainer = document.getElementById('photos-preview');
+            previewContainer.innerHTML = '';
+            
+            if (this.files) {
+                Array.from(this.files).forEach((file, index) => {
+                    const reader = new FileReader();
+                    const div = document.createElement('div');
+                    div.className = 'photo-preview';
+                    
+                    reader.onload = function(e) {
+                        div.innerHTML = `
+                            <img src="${e.target.result}" alt="Preview">
+                            <span class="remove-photo" onclick="removePhoto(${index})">
+                                <i class="fas fa-times"></i>
+                            </span>
+                        `;
+                    }
+                    
+                    reader.readAsDataURL(file);
+                    previewContainer.appendChild(div);
+                });
+            }
+        });
+
+        function removePhoto(index) {
+            const input = document.getElementById('fotos');
+            const container = document.getElementById('photos-preview');
+            
+            // Remove o preview
+            container.children[index].remove();
+            
+            // Cria um novo FileList sem a foto removida
+            const dt = new DataTransfer();
+            Array.from(input.files)
+                .filter((file, i) => i !== index)
+                .forEach(file => dt.items.add(file));
+            
+            input.files = dt.files;
+        }
+
+        // Funções para manipulação de veículos
+        function adicionarVeiculo() {
+            const container = document.getElementById('veiculos-container');
+            const template = container.querySelector('.veiculo-item').cloneNode(true);
+            
+            // Limpar os valores dos campos
+            template.querySelectorAll('input').forEach(input => {
+                input.value = '';
+            });
+            
+            container.appendChild(template);
+        }
+
+        function removerVeiculo(button) {
+            const container = document.getElementById('veiculos-container');
+            if (container.children.length > 1) {
+                button.closest('.veiculo-item').remove();
+            } else {
+                alert('É necessário manter pelo menos um veículo');
+            }
+        }
+
+        // Adicionar máscara de data
+        document.addEventListener('DOMContentLoaded', function() {
+            const nascimentoInput = document.querySelector('input[name="nascimento"]');
+            
+            nascimentoInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, ''); // Remove não-dígitos
+                
+                if (value.length >= 2) {
+                    value = value.substring(0, 2) + '/' + value.substring(2);
+                }
+                if (value.length >= 5) {
+                    value = value.substring(0, 5) + '/' + value.substring(5);
+                }
+                if (value.length > 10) {
+                    value = value.substring(0, 10);
+                }
+                
+                e.target.value = value;
+            });
+        });
+    </script>
+</body>
+</html>

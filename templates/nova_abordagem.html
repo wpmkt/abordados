@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Abordagem</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .search-results {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .abordado-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .abordado-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .abordado-foto {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .selected-abordados {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .selected-abordado {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .selected-abordado img {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .remove-abordado {
+            margin-left: auto;
+            color: #dc3545;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Nova Abordagem</h5>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <form id="abordagemForm" method="POST">
+                            {{ form.csrf_token }}
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    {{ form.data_hora.label(class="form-label") }}
+                                    {{ form.data_hora(class="form-control", readonly=true) }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.local.label(class="form-label") }}
+                                    {{ form.local(class="form-control") }}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Pesquisar Abordado</label>
+                                <div class="input-group">
+                                    <input type="text" id="searchInput" class="form-control" 
+                                           placeholder="Digite o nome da pessoa..."
+                                           oninput="searchAbordados(this.value)">
+                                    <a href="#" id="novoAbordadoBtn" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> Novo Abordado
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div id="searchResults" class="search-results mb-3" style="display: none;">
+                                <!-- Resultados da pesquisa serão inseridos aqui -->
+                            </div>
+
+                            <div id="selectedAbordados" class="selected-abordados mb-3">
+                                <h6 class="mb-3">Abordados Selecionados</h6>
+                                <div id="selectedAbordadosList">
+                                    {% for abordado in selected_abordados %}
+                                    <div class="card mb-2" data-id="{{ abordado.id }}">
+                                        <div class="card-body d-flex align-items-center">
+                                            {% if abordado.foto_perfil %}
+                                            <img src="{{ abordado.foto_perfil }}" alt="Foto de {{ abordado.nome }}" 
+                                                 class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                            {% else %}
+                                            <div class="rounded-circle me-3 bg-secondary d-flex align-items-center justify-content-center" 
+                                                 style="width: 50px; height: 50px;">
+                                                <i class="fas fa-user text-white"></i>
+                                            </div>
+                                            {% endif %}
+                                            <div>
+                                                <h6 class="mb-0">{{ abordado.nome }}</h6>
+                                                <small class="text-muted">
+                                                    Mãe: {{ abordado.mae }}<br>
+                                                    Pai: {{ abordado.pai }}
+                                                </small>
+                                            </div>
+                                            <button type="button" class="btn btn-link text-danger ms-auto" 
+                                                    onclick="removerAbordado('{{ abordado.id }}')">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form.anotacao.label(class="form-label") }}
+                                {{ form.anotacao(class="form-control", rows="3") }}
+                            </div>
+
+                            <input type="hidden" id="selectedAbordadosIds" name="abordados_ids" value="">
+
+                            <div class="d-flex justify-content-end gap-2">
+                                <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancelar</a>
+                                <button type="submit" class="btn btn-primary">Salvar Abordagem</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Atualizar data/hora automaticamente
+        function updateDateTime() {
+            const now = new Date();
+            const formattedDateTime = now.toISOString().slice(0, 16);
+            document.getElementById('data_hora').value = formattedDateTime;
+        }
+        updateDateTime();
+        setInterval(updateDateTime, 60000); // Atualizar a cada minuto
+
+        // Buscar localização atual
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+                
+                // Usar a API de Geocodificação Reversa do OpenStreetMap
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const address = data.address;
+                        const location = `${address.road || ''} ${address.house_number || ''}, ${address.suburb || ''}, ${address.city || ''}`.trim();
+                        document.getElementById('local').value = location;
+                    })
+                    .catch(error => console.error('Erro ao buscar localização:', error));
+            });
+        }
+
+        // Variável para controlar o timeout da pesquisa
+        let searchTimeout;
+
+        // Editar abordado
+        function editarAbordado(id, event) {
+            event.preventDefault(); // Prevenir comportamento padrão
+            event.stopPropagation(); // Impedir que o evento de clique se propague
+            
+            // Salvar os dados do formulário atual no localStorage
+            const formData = {
+                data_hora: document.getElementById('data_hora').value,
+                local: document.getElementById('local').value,
+                anotacao: document.getElementById('anotacao').value,
+                selectedIds: document.getElementById('selectedAbordadosIds').value
+            };
+            localStorage.setItem('abordagemTemp', JSON.stringify(formData));
+            
+            // Redirecionar para a página de edição com parâmetro de retorno
+            window.location.href = `/editar_abordado/${id}?return_to=nova_abordagem`;
+        }
+
+        // Selecionar abordado
+        function selecionarAbordado(id, event) {
+            event.preventDefault(); // Prevenir comportamento padrão
+            event.stopPropagation(); // Impedir que o evento de clique se propague
+            const abordado = currentSearchResults.find(a => a.id === id);
+            if (abordado) {
+                selectAbordado(abordado);
+            }
+        }
+
+        // Variável global para armazenar os resultados da pesquisa
+        let currentSearchResults = [];
+
+        // Pesquisar abordados
+        function searchAbordados(searchTerm) {
+            const resultsDiv = document.getElementById('searchResults');
+            
+            // Limpar o timeout anterior
+            clearTimeout(searchTimeout);
+            
+            // Se o termo de pesquisa estiver vazio, esconder os resultados
+            if (!searchTerm.trim()) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+            
+            // Definir um novo timeout para fazer a pesquisa
+            searchTimeout = setTimeout(() => {
+                fetch(`/search_abordados?q=${encodeURIComponent(searchTerm)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        currentSearchResults = data; // Armazenar os resultados
+                        resultsDiv.style.display = 'block';
+                        resultsDiv.innerHTML = '';
+
+                        data.forEach(abordado => {
+                            const card = document.createElement('div');
+                            card.className = 'card mb-2 abordado-card';
+                            card.innerHTML = `
+                                <div class="card-body d-flex align-items-center">
+                                    <img src="${abordado.foto_perfil || '/static/default-profile.png'}" 
+                                         class="abordado-foto me-3" alt="Foto">
+                                    <div>
+                                        <h6 class="mb-1">${abordado.nome}</h6>
+                                        <small class="text-muted">
+                                            Mãe: ${abordado.mae || 'Não informado'}<br>
+                                            Pai: ${abordado.pai || 'Não informado'}
+                                        </small>
+                                    </div>
+                                    <div class="ms-auto">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editarAbordado('${abordado.id}', event)">
+                                            <i class="fas fa-edit"></i> Editar
+                                        </button>
+                                        <button class="btn btn-sm btn-primary" onclick="selecionarAbordado('${abordado.id}', event)">
+                                            <i class="fas fa-plus"></i> Selecionar
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                            resultsDiv.appendChild(card);
+                        });
+
+                        if (data.length === 0) {
+                            resultsDiv.innerHTML = '<div class="alert alert-info">Nenhum abordado encontrado.</div>';
+                        }
+                    })
+                    .catch(error => console.error('Erro na pesquisa:', error));
+            }, 300);
+        }
+
+        // Selecionar abordado
+        function selectAbordado(abordado) {
+            if (!abordado || !abordado.id) {
+                console.error('Dados do abordado inválidos:', abordado);
+                return;
+            }
+
+            const existingAbordado = document.querySelector(`[data-id="${abordado.id}"]`);
+            if (existingAbordado) {
+                console.log('Abordado já selecionado:', abordado.id);
+                return;
+            }
+
+            console.log('Adicionando novo abordado:', abordado);
+
+            const card = document.createElement('div');
+            card.className = 'card mb-2';
+            card.dataset.id = abordado.id;
+            card.innerHTML = `
+                <div class="card-body d-flex align-items-center">
+                    ${abordado.foto_perfil ? 
+                        `<img src="${abordado.foto_perfil}" alt="Foto de ${abordado.nome}" 
+                              class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">` :
+                        `<div class="rounded-circle me-3 bg-secondary d-flex align-items-center justify-content-center" 
+                              style="width: 50px; height: 50px;">
+                            <i class="fas fa-user text-white"></i>
+                         </div>`
+                    }
+                    <div>
+                        <h6 class="mb-0">${abordado.nome}</h6>
+                        <small class="text-muted">
+                            Mãe: ${abordado.mae || 'Não informado'}<br>
+                            Pai: ${abordado.pai || 'Não informado'}
+                        </small>
+                    </div>
+                    <button type="button" class="btn btn-link text-danger ms-auto" 
+                            onclick="removerAbordado('${abordado.id}')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('selectedAbordadosList').appendChild(card);
+            updateSelectedIds();
+            
+            // Limpar a pesquisa
+            document.getElementById('searchResults').style.display = 'none';
+            document.getElementById('searchInput').value = '';
+        }
+
+        // Remover abordado selecionado
+        function removeAbordado(id) {
+            const element = document.querySelector(`[data-id="${id}"]`);
+            if (element) {
+                element.remove();
+                updateSelectedIds();
+            }
+        }
+
+        // Atualizar IDs dos abordados selecionados
+        function updateSelectedIds() {
+            const selectedElements = document.querySelectorAll('#selectedAbordadosList [data-id]');
+            const ids = Array.from(selectedElements)
+                .map(el => el.dataset.id)
+                .filter(id => id); // Remove IDs vazios
+            document.getElementById('selectedAbordadosIds').value = ids.join(';');
+            console.log('IDs atualizados:', document.getElementById('selectedAbordadosIds').value);
+        }
+
+        // Validação do formulário
+        document.querySelector('button[type="submit"]').onclick = function(e) {
+            const ids = document.getElementById('selectedAbordadosIds').value;
+            if (!ids) {
+                e.preventDefault();
+                alert('Selecione pelo menos um abordado.');
+                return false;
+            }
+            return true;
+        };
+
+        // Ao carregar a página, verificar se há dados salvos ou abordado pré-selecionado
+        window.onload = function() {
+            // Verificar se há dados salvos no localStorage
+            const savedData = localStorage.getItem('abordagemTemp');
+            if (savedData) {
+                const formData = JSON.parse(savedData);
+                document.getElementById('data_hora').value = formData.data_hora;
+                document.getElementById('local').value = formData.local;
+                document.getElementById('anotacao').value = formData.anotacao;
+                
+                // Recarregar os abordados selecionados
+                if (formData.selectedIds) {
+                    const ids = formData.selectedIds.split(';').filter(id => id); // Remove IDs vazios
+                    Promise.all(ids.map(id => 
+                        fetch(`/get_abordado/${id}`)
+                            .then(response => response.json())
+                            .then(abordado => {
+                                if (abordado && !document.querySelector(`[data-id="${id}"]`)) {
+                                    selectAbordado(abordado);
+                                }
+                            })
+                            .catch(error => console.error(`Erro ao carregar abordado ${id}:`, error))
+                    )).then(() => {
+                        // Verificar se há um novo abordado para adicionar
+                        const selectedAbordado = {{ selected_abordado | default('null') | safe }};
+                        if (selectedAbordado && !document.querySelector(`[data-id="${selectedAbordado.id}"]`)) {
+                            selectAbordado(selectedAbordado);
+                        }
+                        updateSelectedIds();
+                    });
+                } else {
+                    // Se não havia IDs salvos, apenas adicionar o novo abordado se existir
+                    const selectedAbordado = {{ selected_abordado | default('null') | safe }};
+                    if (selectedAbordado && !document.querySelector(`[data-id="${selectedAbordado.id}"]`)) {
+                        selectAbordado(selectedAbordado);
+                        updateSelectedIds();
+                    }
+                }
+                
+                // Limpar os dados salvos
+                localStorage.removeItem('abordagemTemp');
+            } else {
+                // Se não há dados salvos, apenas verificar se há um abordado pré-selecionado
+                const selectedAbordado = {{ selected_abordado | default('null') | safe }};
+                if (selectedAbordado && !document.querySelector(`[data-id="${selectedAbordado.id}"]`)) {
+                    selectAbordado(selectedAbordado);
+                    updateSelectedIds();
+                }
+            }
+
+            // Inicializar os IDs dos abordados já listados
+            updateSelectedIds();
+        };
+
+        // Atualizar link do botão Novo Abordado
+        document.getElementById('novoAbordadoBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            // Salvar os dados do formulário atual no localStorage
+            const formData = {
+                data_hora: document.getElementById('data_hora').value,
+                local: document.getElementById('local').value,
+                anotacao: document.getElementById('anotacao').value,
+                selectedIds: document.getElementById('selectedAbordadosIds').value
+            };
+            localStorage.setItem('abordagemTemp', JSON.stringify(formData));
+            
+            // Redirecionar para a página de novo abordado
+            window.location.href = `{{ url_for('novo_abordado', return_to='nova_abordagem') }}`;
+        });
+
+        // Função para remover abordado da lista
+        function removerAbordado(id) {
+            const element = document.querySelector(`[data-id="${id}"]`);
+            if (element) {
+                element.remove();
+                
+                // Atualizar o campo hidden com os IDs
+                const selectedIds = Array.from(document.querySelectorAll('#selectedAbordadosList .card'))
+                    .map(card => card.dataset.id)
+                    .join(',');
+                document.getElementById('selectedAbordadosIds').value = selectedIds;
+            }
+        }
+    </script>
+</body>
+</html> 

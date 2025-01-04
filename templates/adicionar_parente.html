@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adicionar Parente</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" rel="stylesheet">
+    <style>
+        .profile-upload {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 2px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+            margin: 0 auto 20px;
+            position: relative;
+        }
+        .profile-upload img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+        .profile-upload i {
+            font-size: 3rem;
+            color: #ccc;
+        }
+        .profile-upload:hover {
+            border-color: #0d6efd;
+        }
+        .profile-upload:hover i {
+            color: #0d6efd;
+        }
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .photo-preview {
+            width: 100%;
+            padding-bottom: 100%;
+            position: relative;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .photo-preview img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .photo-preview .remove-photo {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            padding: 5px;
+            cursor: pointer;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Adicionar Parente</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" enctype="multipart/form-data">
+                            {{ form.csrf_token }}
+                            
+                            <!-- Foto de Perfil -->
+                            <div class="mb-4 text-center">
+                                <label class="profile-upload" for="foto_perfil">
+                                    <img id="profile-preview" alt="Preview da foto de perfil">
+                                    <i class="fas fa-user-circle"></i>
+                                    <input type="file" id="foto_perfil" name="foto_perfil" accept="image/*" capture="user" style="display: none;">
+                                </label>
+                                <small class="text-muted d-block">Clique para adicionar uma foto de perfil</small>
+                            </div>
+
+                            <!-- Informações Pessoais -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.nome.label(class="form-label") }}
+                                    {{ form.nome(class="form-control") }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form.nascimento.label(class="form-label") }}
+                                    {{ form.nascimento(class="form-control", type="date") }}
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.mae.label(class="form-label") }}
+                                    {{ form.mae(class="form-control") }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form.pai.label(class="form-label") }}
+                                    {{ form.pai(class="form-control") }}
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.rg.label(class="form-label") }}
+                                    {{ form.rg(class="form-control") }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form.cpf.label(class="form-label") }}
+                                    {{ form.cpf(class="form-control") }}
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.endereco.label(class="form-label") }}
+                                    {{ form.endereco(class="form-control") }}
+                                </div>
+                            </div>
+
+                            <!-- Fotos Adicionais -->
+                            <div class="mb-3">
+                                <label class="form-label">Fotos Adicionais</label>
+                                {{ form.fotos(class="form-control", multiple=True, accept="image/*") }}
+                                <div id="photos-preview" class="photos-grid mt-2"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form.anotacoes.label(class="form-label") }}
+                                {{ form.anotacoes(class="form-control", rows="3") }}
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Salvar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <script>
+        // Preview das fotos adicionais
+        document.getElementById('fotos').addEventListener('change', function(e) {
+            const previewContainer = document.getElementById('photos-preview');
+            previewContainer.innerHTML = '';
+            
+            if (this.files) {
+                Array.from(this.files).forEach((file, index) => {
+                    const reader = new FileReader();
+                    const div = document.createElement('div');
+                    div.className = 'photo-preview';
+                    
+                    reader.onload = function(e) {
+                        div.innerHTML = `
+                            <img src="${e.target.result}" alt="Preview">
+                            <span class="remove-photo" onclick="removePhoto(${index})">
+                                <i class="fas fa-times"></i>
+                            </span>
+                        `;
+                    }
+                    
+                    reader.readAsDataURL(file);
+                    previewContainer.appendChild(div);
+                });
+            }
+        });
+
+        function removePhoto(index) {
+            const input = document.getElementById('fotos');
+            const container = document.getElementById('photos-preview');
+            
+            // Remove o preview
+            container.children[index].remove();
+            
+            // Cria um novo FileList sem a foto removida
+            const dt = new DataTransfer();
+            Array.from(input.files)
+                .filter((file, i) => i !== index)
+                .forEach(file => dt.items.add(file));
+            
+            input.files = dt.files;
+        }
+
+        // Preview da foto de perfil
+        document.getElementById('foto_perfil').addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                const preview = document.getElementById('profile-preview');
+                const icon = document.querySelector('.profile-upload i');
+                
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    icon.style.display = 'none';
+                }
+                
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    </script>
+</body>
+</html> 
