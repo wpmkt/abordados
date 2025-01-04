@@ -13,6 +13,7 @@ import pickle
 import os.path
 from datetime import datetime, timedelta
 from threading import Lock
+import base64
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'sua-chave-secreta-aqui'
@@ -111,25 +112,13 @@ RANGE_NAME = 'Abordados!A:Z'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 def get_google_sheets_service():
-    creds = None
-    # O arquivo token.pickle armazena os tokens de acesso e atualização do usuário
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            creds = pickle.load(token)
-    
-    # Se não houver credenciais válidas disponíveis, deixe o usuário fazer login
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        # Salva as credenciais para a próxima execução
-        with open('token.pickle', 'wb') as token:
-            pickle.dump(creds, token)
-
-    return build('sheets', 'v4', credentials=creds)
+    try:
+        creds = get_credentials()
+        service = build('sheets', 'v4', credentials=creds)
+        return service
+    except Exception as e:
+        print(f"ERRO ao criar serviço do Google Sheets: {str(e)}")
+        return None
 
 def converter_url_drive(url):
     if not url:
@@ -1518,6 +1507,31 @@ def buscar_abordado_por_id(id):
     except Exception as e:
         print(f"Erro ao buscar abordado {id}: {str(e)}")
         return None
+
+def get_credentials():
+    creds = None
+    if os.environ.get('GOOGLE_TOKEN'):
+        # Decodifica o token das variáveis de ambiente
+        token_data = base64.b64decode(os.environ.get('GOOGLE_TOKEN'))
+        creds = pickle.loads(token_data)
+    
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            # Carrega as credenciais da variável de ambiente
+            creds_data = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
+            flow = InstalledAppFlow.from_client_config(
+                creds_data,
+                ['https://www.googleapis.com/auth/spreadsheets']
+            )
+            creds = flow.run_local_server(port=0)
+        
+        # Salva o token atualizado na variável de ambiente
+        token_bytes = pickle.dumps(creds)
+        os.environ['GOOGLE_TOKEN'] = base64.b64encode(token_bytes).decode('utf-8')
+    
+    return creds
 
 if __name__ == '__main__':
     app.run(debug=True) 
