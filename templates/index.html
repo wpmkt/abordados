@@ -219,604 +219,586 @@
         </div>
         
         {% for abordado in abordados %}
-        <div class="card">
-            <div class="card-header" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}">
-                <div class="person-info">
-                    <div class="avatar">
-                        {% if abordado.get('Foto Perfil') %}
-                            <img src="{{ abordado.get('Foto Perfil') }}" alt="Foto de {{ abordado.get('Nome', '') }}" 
-                                 style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
-                        {% else %}
-                            <i class="fas fa-user"></i>
-                        {% endif %}
+        <div class="card mb-3">
+            <div class="row g-0">
+                <div class="col-md-2">
+                    {% if abordado.get('Foto Perfil') %}
+                        <img src="{{ abordado.get('Foto Perfil') }}" class="img-fluid rounded-start" alt="Foto de perfil">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='placeholder.jpg') }}" class="img-fluid rounded-start" alt="Sem foto">
+                    {% endif %}
+                </div>
+                <div class="col-md-10">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ abordado.get('Nome', '') }}</h5>
+                        <p class="card-text">
+                            <small class="text-muted">Principal</small>
+                        </p>
+                        <div class="ms-auto d-flex gap-2">
+                            <div class="btn-group">
+                                <a href="{{ url_for('editar_abordado', abordado_id=abordado.get('ID', '')) }}" 
+                                   class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger" title="Deletar"
+                                        onclick="deleteAbordado('{{ abordado.get('ID', '') }}', '{{ abordado.get('Nome', '') }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <i class="fas fa-chevron-down ms-3"></i>
+                        </div>
                     </div>
-                    <div>
-                        <h5 class="mb-0">{{ abordado.get('Nome', '') }}</h5>
-                        <small class="status-badge">Principal</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#fotos{{ abordado.get('ID', '') }}">
+                    Fotos
+                </button>
+            </h2>
+            <div id="fotos{{ abordado.get('ID', '') }}" class="accordion-collapse collapse">
+                <div class="accordion-body">
+                    <div class="row">
+                        {% for foto in abordado.get('Fotos', []) %}
+                            <div class="col-md-3 mb-3">
+                                <a href="{{ foto }}" target="_blank">
+                                    <img src="{{ foto }}" class="img-fluid" alt="Foto">
+                                </a>
+                            </div>
+                        {% endfor %}
                     </div>
-                    <div class="ms-auto d-flex gap-2">
+                </div>
+            </div>
+        </div>
+
+        <div class="vehicles-section">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="section-title mb-0">Veículos</h6>
+                <a href="{{ url_for('adicionar_veiculo', abordado_id=abordado.get('ID')|int) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-plus"></i> Adicionar Veículo
+                </a>
+            </div>
+            {% if abordado.get('Veiculos') %}
+                {% for veiculo in abordado.get('Veiculos') %}
+                <div class="vehicle-item">
+                    <div class="d-flex align-items-center justify-content-between w-100">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-car"></i>
+                            <div>
+                                <div class="fw-bold">{{ veiculo.get('marca') }} {{ veiculo.get('modelo') }}</div>
+                                <small class="text-muted">
+                                    <i class="fas fa-palette me-1"></i>{{ veiculo.get('cor') }} |
+                                    <i class="fas fa-hashtag me-1"></i>{{ veiculo.get('placa') }}
+                                </small>
+                            </div>
+                        </div>
                         <div class="btn-group">
-                            <a href="{{ url_for('editar_abordado', abordado_id=abordado.get('ID', '')) }}" 
+                            <a href="{{ url_for('editar_veiculo', veiculo_id=veiculo.get('id')) }}" 
                                class="btn btn-sm btn-outline-primary" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </a>
                             <button class="btn btn-sm btn-outline-danger" title="Deletar"
-                                    onclick="deleteAbordado('{{ abordado.get('ID', '') }}', '{{ abordado.get('Nome', '') }}')">
+                                    onclick="deleteVeiculo('{{ veiculo.get('id') }}', '{{ veiculo.get('marca') }} {{ veiculo.get('modelo') }}')">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
-                        <i class="fas fa-chevron-down ms-3"></i>
                     </div>
                 </div>
+                {% endfor %}
+            {% else %}
+            <div class="vehicle-item">
+                <i class="fas fa-car"></i>
+                <span>Nenhum veículo registrado</span>
             </div>
-            
-            <div id="collapse{{ loop.index }}" class="collapse">
-                <div class="card-body">
-                    <div class="info-item">
-                        <i class="far fa-id-card"></i>
-                        <span>CPF: {{ abordado.get('CPF', 'XXX.XXX.XXX-XX') }}</span>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-id-card"></i>
-                        <span>RG: {{ abordado.get('RG', 'XX.XXX.XXX-X') }}</span>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-phone"></i>
-                        <span>Tel: {{ abordado.get('Telefone', '(11) XXXXX-XXXX') }}</span>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span>{{ abordado.get('Endereço', 'Endereço não informado') }}</span>
-                    </div>
+            {% endif %}
+        </div>
 
-                    <!-- Seção de Fotos -->
-                    <div class="fotos-section">
-                        <h6 class="mb-2">
-                            <i class="fas fa-camera"></i> Fotos
-                            <button class="btn btn-link btn-sm float-end" type="button" data-bs-toggle="collapse" data-bs-target="#fotos{{ abordado.get('ID', '') }}" aria-expanded="false">
-                                <i class="fas fa-chevron-down"></i>
+        <div class="related-people-section">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="section-title mb-0">Parentes</h6>
+                <a href="{{ url_for('adicionar_parente', abordado_id=abordado.get('ID')|default('0')|int) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-plus"></i> Adicionar Parente
+                </a>
+            </div>
+            {% if abordado.get('Parentes') %}
+                {% for parente in abordado.get('Parentes') %}
+                <div class="related-person-item">
+                    <div class="d-flex align-items-center justify-content-between w-100">
+                        <div class="d-flex align-items-center gap-3">
+                            {% if parente.get('foto_perfil') %}
+                            <img src="{{ parente.get('foto_perfil') }}" alt="Foto de {{ parente.get('nome') }}" 
+                                 style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                            {% else %}
+                            <div class="avatar">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <div class="fw-bold">{{ parente.get('nome') }}</div>
+                                {% if parente.get('endereco') %}
+                                <small class="text-muted">
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    {{ parente.get('endereco') }}
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="btn-group">
+                            <a href="{{ url_for('editar_parente', parente_id=parente.get('id')) }}" 
+                               class="btn btn-sm btn-outline-primary" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-sm btn-outline-danger" title="Deletar"
+                                    onclick="deleteParente('{{ parente.get('id') }}', '{{ parente.get('nome') }}')">
+                                <i class="fas fa-trash"></i>
                             </button>
-                        </h6>
-                        <div class="collapse" id="fotos{{ abordado.get('ID', '') }}">
-                            <div class="row g-2">
-                                {% for foto in abordado.get('Fotos', []) %}
-                                <div class="col-4">
-                                    <a href="{{ foto }}" target="_blank">
-                                        <img src="{{ foto }}" class="img-fluid rounded" alt="Foto">
-                                    </a>
-                                </div>
-                                {% endfor %}
-                            </div>
                         </div>
                     </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="related-person-item">
+                <i class="fas fa-user"></i>
+                <span>Nenhum parente registrado</span>
+            </div>
+            {% endif %}
+        </div>
 
-                    <div class="vehicles-section">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="section-title mb-0">Veículos</h6>
-                            <a href="{{ url_for('adicionar_veiculo', abordado_id=abordado.get('ID')|int) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-plus"></i> Adicionar Veículo
-                            </a>
-                        </div>
-                        {% if abordado.get('Veiculos') %}
-                            {% for veiculo in abordado.get('Veiculos') %}
-                            <div class="vehicle-item">
-                                <div class="d-flex align-items-center justify-content-between w-100">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <i class="fas fa-car"></i>
-                                        <div>
-                                            <div class="fw-bold">{{ veiculo.get('marca') }} {{ veiculo.get('modelo') }}</div>
-                                            <small class="text-muted">
-                                                <i class="fas fa-palette me-1"></i>{{ veiculo.get('cor') }} |
-                                                <i class="fas fa-hashtag me-1"></i>{{ veiculo.get('placa') }}
-                                            </small>
-                                        </div>
-                                    </div>
-                                    <div class="btn-group">
-                                        <a href="{{ url_for('editar_veiculo', veiculo_id=veiculo.get('id')) }}" 
-                                           class="btn btn-sm btn-outline-primary" title="Editar">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <button class="btn btn-sm btn-outline-danger" title="Deletar"
-                                                onclick="deleteVeiculo('{{ veiculo.get('id') }}', '{{ veiculo.get('marca') }} {{ veiculo.get('modelo') }}')">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                        <div class="vehicle-item">
-                            <i class="fas fa-car"></i>
-                            <span>Nenhum veículo registrado</span>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="related-people-section">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="section-title mb-0">Parentes</h6>
-                            <a href="{{ url_for('adicionar_parente', abordado_id=abordado.get('ID')|default('0')|int) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-plus"></i> Adicionar Parente
-                            </a>
-                        </div>
-                        {% if abordado.get('Parentes') %}
-                            {% for parente in abordado.get('Parentes') %}
-                            <div class="related-person-item">
-                                <div class="d-flex align-items-center justify-content-between w-100">
-                                    <div class="d-flex align-items-center gap-3">
-                                        {% if parente.get('foto_perfil') %}
-                                        <img src="{{ parente.get('foto_perfil') }}" alt="Foto de {{ parente.get('nome') }}" 
-                                             style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
-                                        {% else %}
-                                        <div class="avatar">
+        <!-- Seção de Parentes -->
+        <div class="photos-section mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3" 
+                 data-bs-toggle="collapse" data-bs-target="#parentesCollapse{{ loop.index }}">
+                <h6 class="mb-0">Parentes</h6>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="collapse" id="parentesCollapse{{ loop.index }}">
+                <div class="parentes-grid">
+                    {% if abordado.get('Parentes') %}
+                        {% for parente in abordado.get('Parentes') %}
+                            <div class="parente-card">
+                                <div class="parente-header">
+                                    {% if parente.get('Foto Perfil') %}
+                                        <img src="{{ parente.get('Foto Perfil') }}" alt="Foto de {{ parente.get('Nome', '') }}">
+                                    {% else %}
+                                        <div class="no-photo">
                                             <i class="fas fa-user"></i>
                                         </div>
-                                        {% endif %}
-                                        <div>
-                                            <div class="fw-bold">{{ parente.get('nome') }}</div>
-                                            {% if parente.get('endereco') %}
-                                            <small class="text-muted">
-                                                <i class="fas fa-map-marker-alt me-1"></i>
-                                                {{ parente.get('endereco') }}
-                                            </small>
-                                            {% endif %}
-                                        </div>
+                                    {% endif %}
+                                    <div class="parente-info">
+                                        <h6>{{ parente.get('Nome', '') }}</h6>
+                                        <span class="badge bg-secondary">{{ parente.get('Parentesco', '') }}</span>
                                     </div>
-                                    <div class="btn-group">
-                                        <a href="{{ url_for('editar_parente', parente_id=parente.get('id')) }}" 
+                                    <div class="parente-actions">
+                                        <a href="{{ url_for('editar_parente', parente_id=parente.get('ID', '')) }}" 
                                            class="btn btn-sm btn-outline-primary" title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         <button class="btn btn-sm btn-outline-danger" title="Deletar"
-                                                onclick="deleteParente('{{ parente.get('id') }}', '{{ parente.get('nome') }}')">
+                                                onclick="deleteParente('{{ parente.get('ID', '') }}', '{{ parente.get('Nome', '') }}')">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
                                 </div>
                             </div>
-                            {% endfor %}
-                        {% else %}
-                        <div class="related-person-item">
-                            <i class="fas fa-user"></i>
-                            <span>Nenhum parente registrado</span>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <!-- Seção de Parentes -->
-                    <div class="photos-section mt-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3" 
-                             data-bs-toggle="collapse" data-bs-target="#parentesCollapse{{ loop.index }}">
-                            <h6 class="mb-0">Parentes</h6>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                        <div class="collapse" id="parentesCollapse{{ loop.index }}">
-                            <div class="parentes-grid">
-                                {% if abordado.get('Parentes') %}
-                                    {% for parente in abordado.get('Parentes') %}
-                                        <div class="parente-card">
-                                            <div class="parente-header">
-                                                {% if parente.get('Foto Perfil') %}
-                                                    <img src="{{ parente.get('Foto Perfil') }}" alt="Foto de {{ parente.get('Nome', '') }}">
-                                                {% else %}
-                                                    <div class="no-photo">
-                                                        <i class="fas fa-user"></i>
-                                                    </div>
-                                                {% endif %}
-                                                <div class="parente-info">
-                                                    <h6>{{ parente.get('Nome', '') }}</h6>
-                                                    <span class="badge bg-secondary">{{ parente.get('Parentesco', '') }}</span>
-                                                </div>
-                                                <div class="parente-actions">
-                                                    <a href="{{ url_for('editar_parente', parente_id=parente.get('ID', '')) }}" 
-                                                       class="btn btn-sm btn-outline-primary" title="Editar">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                    <button class="btn btn-sm btn-outline-danger" title="Deletar"
-                                                            onclick="deleteParente('{{ parente.get('ID', '') }}', '{{ parente.get('Nome', '') }}')">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <p class="text-muted">Nenhum parente cadastrado</p>
-                                {% endif %}
-                                <div class="mt-3">
-                                    <a href="{{ url_for('adicionar_parente', abordado_id=abordado.get('ID', '')) }}" 
-                                       class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-plus"></i> Adicionar Parente
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Seção de Abordagens -->
-                    <div class="abordagens-section mt-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3" 
-                             data-bs-toggle="collapse" data-bs-target="#abordagensCollapse{{ loop.index }}"
-                             onclick="carregarAbordagens('{{ abordado.get('ID') }}', '{{ loop.index }}')">
-                            <h6 class="mb-0">Abordagens</h6>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                        <div class="collapse" id="abordagensCollapse{{ loop.index }}">
-                            <div class="abordagens-list" id="abordagensList{{ loop.index }}">
-                                <div class="text-center">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Carregando...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Abordados Relacionados -->
-                    {% if abordado['Abordados Relacionados'] %}
-                    <div class="mt-3">
-                        <h6 class="mb-2">Abordado com:</h6>
-                        <div class="list-group">
-                            {% for relacionado in abordado['Abordados Relacionados'] %}
-                            <a href="{{ url_for('editar_abordado', abordado_id=relacionado.id) }}" class="list-group-item list-group-item-action">
-                                <div class="d-flex align-items-center">
-                                    {% if relacionado.foto_perfil %}
-                                    <img src="{{ relacionado.foto_perfil }}" alt="Foto de {{ relacionado.nome }}" 
-                                         class="rounded-circle me-3" style="width: 40px; height: 40px; object-fit: cover;">
-                                    {% else %}
-                                    <div class="rounded-circle me-3 bg-secondary d-flex align-items-center justify-content-center" 
-                                         style="width: 40px; height: 40px;">
-                                        <i class="fas fa-user text-white"></i>
-                                    </div>
-                                    {% endif %}
-                                    <div>
-                                        <h6 class="mb-0">{{ relacionado.nome }}</h6>
-                                        <small class="text-muted">
-                                            {{ relacionado.data_hora }} - {{ relacionado.local }}
-                                        </small>
-                                    </div>
-                                </div>
-                            </a>
-                            {% endfor %}
-                        </div>
-                    </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Nenhum parente cadastrado</p>
                     {% endif %}
+                    <div class="mt-3">
+                        <a href="{{ url_for('adicionar_parente', abordado_id=abordado.get('ID', '')) }}" 
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-plus"></i> Adicionar Parente
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
-        {% endfor %}
+
+        <!-- Seção de Abordagens -->
+        <div class="abordagens-section mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3" 
+                 data-bs-toggle="collapse" data-bs-target="#abordagensCollapse{{ loop.index }}"
+                 onclick="carregarAbordagens('{{ abordado.get('ID') }}', '{{ loop.index }}')">
+                <h6 class="mb-0">Abordagens</h6>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="collapse" id="abordagensCollapse{{ loop.index }}">
+                <div class="abordagens-list" id="abordagensList{{ loop.index }}">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Abordados Relacionados -->
+        {% if abordado['Abordados Relacionados'] %}
+        <div class="mt-3">
+            <h6 class="mb-2">Abordado com:</h6>
+            <div class="list-group">
+                {% for relacionado in abordado['Abordados Relacionados'] %}
+                <a href="{{ url_for('editar_abordado', abordado_id=relacionado.id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex align-items-center">
+                        {% if relacionado.foto_perfil %}
+                        <img src="{{ relacionado.foto_perfil }}" alt="Foto de {{ relacionado.nome }}" 
+                             class="rounded-circle me-3" style="width: 40px; height: 40px; object-fit: cover;">
+                        {% else %}
+                        <div class="rounded-circle me-3 bg-secondary d-flex align-items-center justify-content-center" 
+                             style="width: 40px; height: 40px;">
+                            <i class="fas fa-user text-white"></i>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <h6 class="mb-0">{{ relacionado.nome }}</h6>
+                            <small class="text-muted">
+                                {{ relacionado.data_hora }} - {{ relacionado.local }}
+                            </small>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
+</div>
+{% endfor %}
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-    function deletePhoto(photoUrl, abordadoId) {
-        if (confirm('Tem certeza que deseja deletar esta foto?')) {
-            // Encontrar o elemento da foto
-            const photoElement = document.querySelector(`img[src="${photoUrl}"]`);
-            if (!photoElement) {
-                console.error('Elemento da foto não encontrado');
-                return;
-            }
-            
-            // Encontrar o elemento pai (div.col-6)
-            const photoContainer = photoElement.closest('.col-6');
-            if (!photoContainer) {
-                console.error('Container da foto não encontrado');
-                return;
-            }
-            
-            // Adicionar classe de loading
-            photoContainer.style.opacity = '0.5';
-            
-            fetch('/delete_photo', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    photo_url: photoUrl,
-                    abordado_id: abordadoId,
-                }),
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro na resposta do servidor');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Remover o elemento da foto com animação
-                    photoContainer.style.transition = 'all 0.3s ease';
-                    photoContainer.style.opacity = '0';
-                    photoContainer.style.transform = 'scale(0.8)';
-                    setTimeout(() => {
-                        photoContainer.remove();
-                        
-                        // Verificar se era a última foto
-                        const photosContainer = photoContainer.closest('.row');
-                        if (photosContainer && photosContainer.children.length === 0) {
-                            photosContainer.innerHTML = '<div class="col-12 text-center text-muted">' +
-                                '<i class="fas fa-info-circle me-2"></i>Nenhuma foto adicional registrada</div>';
-                        }
-                    }, 300);
-                } else {
-                    alert('Erro ao deletar foto: ' + (data.error || 'Erro desconhecido'));
-                    // Restaurar opacidade
-                    photoContainer.style.opacity = '1';
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao deletar foto: ' + error.message);
-                // Restaurar opacidade
-                photoContainer.style.opacity = '1';
-            });
-        }
-    }
-
-    function downloadPhoto(url) {
-        const link = document.createElement('a');
-        link.href = url;
-        
-        // Extrair o nome do arquivo da URL
-        let filename = 'foto';
-        if (url.includes('/')) {
-            filename = url.split('/').pop();
-        }
-        if (!filename.includes('.')) {
-            filename += '.jpg';
-        }
-        
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    // Novas funções para o menu lateral
-    function toggleSidebar() {
-        document.querySelector('.sidebar').classList.toggle('active');
-        document.querySelector('.main-content').classList.toggle('sidebar-active');
-    }
-
-    function exportarDados() {
-        alert('Funcionalidade de exportação em desenvolvimento');
-    }
-
-    function abrirConfiguracoes() {
-        alert('Configurações em desenvolvimento');
-    }
-
-    // Fechar menu lateral ao clicar fora em dispositivos móveis
-    document.addEventListener('click', function(event) {
-        const sidebar = document.querySelector('.sidebar');
-        const menuToggle = document.querySelector('.menu-toggle');
-        
-        if (window.innerWidth <= 768) {
-            if (!sidebar.contains(event.target) && !menuToggle.contains(event.target) && sidebar.classList.contains('active')) {
-                toggleSidebar();
-            }
-        }
-    });
-
-    function deleteVeiculo(veiculoId, veiculoNome) {
-        if (confirm(`Tem certeza que deseja deletar o veículo ${veiculoNome}?`)) {
-            // Encontrar o elemento do veículo usando um seletor mais específico
-            const veiculoElement = document.querySelector(`.vehicle-item button[onclick*="'${veiculoId}'"]`).closest('.vehicle-item');
-            if (!veiculoElement) {
-                console.error('Elemento do veículo não encontrado');
-                return;
-            }
-            
-            // Adicionar classe de loading
-            veiculoElement.style.opacity = '0.5';
-            
-            fetch('/delete_veiculo', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    veiculo_id: veiculoId
-                }),
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro na resposta do servidor');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Remover o elemento do veículo com animação
-                    veiculoElement.style.transition = 'all 0.3s ease';
-                    veiculoElement.style.opacity = '0';
-                    veiculoElement.style.transform = 'scale(0.8)';
-                    setTimeout(() => {
-                        veiculoElement.remove();
-                        
-                        // Verificar se era o último veículo
-                        const veiculosContainer = veiculoElement.closest('.vehicles-section');
-                        const outrosVeiculos = veiculosContainer.querySelectorAll('.vehicle-item');
-                        if (outrosVeiculos.length === 0) {
-                            const noVeiculosDiv = document.createElement('div');
-                            noVeiculosDiv.className = 'vehicle-item';
-                            noVeiculosDiv.innerHTML = `
-                                <i class="fas fa-car"></i>
-                                <span>Nenhum veículo registrado</span>
-                            `;
-                            veiculosContainer.appendChild(noVeiculosDiv);
-                        }
-                    }, 300);
-                } else {
-                    alert('Erro ao deletar veículo: ' + (data.error || 'Erro desconhecido'));
-                    // Restaurar opacidade
-                    veiculoElement.style.opacity = '1';
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao deletar veículo: ' + error.message);
-                // Restaurar opacidade
-                veiculoElement.style.opacity = '1';
-            });
-        }
-    }
-
-    function deleteParente(parenteId, parenteNome) {
-        if (confirm(`Tem certeza que deseja deletar o parente ${parenteNome}?`)) {
-            // Encontrar o elemento do parente usando um seletor mais específico
-            const parenteElement = document.querySelector(`.related-person-item button[onclick*="'${parenteId}'"]`).closest('.related-person-item');
-            if (!parenteElement) {
-                console.error('Elemento do parente não encontrado');
-                return;
-            }
-            
-            // Adicionar classe de loading
-            parenteElement.style.opacity = '0.5';
-            
-            fetch('/delete_parente', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    parente_id: parenteId
-                }),
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro na resposta do servidor');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Remover o elemento do parente com animação
-                    parenteElement.style.transition = 'all 0.3s ease';
-                    parenteElement.style.opacity = '0';
-                    parenteElement.style.transform = 'scale(0.8)';
-                    setTimeout(() => {
-                        parenteElement.remove();
-                        
-                        // Verificar se era o último parente
-                        const parentesContainer = parenteElement.closest('.related-people-section');
-                        const outrosParentes = parentesContainer.querySelectorAll('.related-person-item');
-                        if (outrosParentes.length === 0) {
-                            const noParentesDiv = document.createElement('div');
-                            noParentesDiv.className = 'related-person-item';
-                            noParentesDiv.innerHTML = `
-                                <i class="fas fa-user"></i>
-                                <span>Nenhum parente registrado</span>
-                            `;
-                            parentesContainer.appendChild(noParentesDiv);
-                        }
-                    }, 300);
-                } else {
-                    alert('Erro ao deletar parente: ' + (data.error || 'Erro desconhecido'));
-                    // Restaurar opacidade
-                    parenteElement.style.opacity = '1';
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao deletar parente: ' + error.message);
-                // Restaurar opacidade
-                parenteElement.style.opacity = '1';
-            });
-        }
-    }
-
-    function deleteAbordado(abordadoId, abordadoNome) {
-        if (confirm(`Tem certeza que deseja deletar o abordado ${abordadoNome}? Esta ação também removerá todos os veículos e parentes associados.`)) {
-            // Encontrar o elemento do abordado
-            const abordadoElement = document.querySelector(`button[onclick*="${abordadoId}"]`).closest('.card');
-            if (!abordadoElement) {
-                console.error('Elemento do abordado não encontrado');
-                return;
-            }
-            
-            // Adicionar classe de loading
-            abordadoElement.style.opacity = '0.5';
-            
-            fetch('/delete_abordado', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    abordado_id: abordadoId
-                }),
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro na resposta do servidor');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Remover o elemento do abordado com animação
-                    abordadoElement.style.transition = 'all 0.3s ease';
-                    abordadoElement.style.opacity = '0';
-                    abordadoElement.style.transform = 'scale(0.8)';
-                    setTimeout(() => {
-                        abordadoElement.remove();
-                        
-                        // Verificar se era o último abordado
-                        const abordadosContainer = document.querySelector('.main-content');
-                        const outrosAbordados = abordadosContainer.querySelectorAll('.card');
-                        if (outrosAbordados.length === 0) {
-                            const noAbordadosDiv = document.createElement('div');
-                            noAbordadosDiv.className = 'alert alert-info';
-                            noAbordadosDiv.innerHTML = `
-                                <i class="fas fa-info-circle me-2"></i>
-                                Nenhum abordado registrado
-                            `;
-                            abordadosContainer.appendChild(noAbordadosDiv);
-                        }
-                    }, 300);
-                } else {
-                    alert('Erro ao deletar abordado: ' + (data.error || 'Erro desconhecido'));
-                    // Restaurar opacidade
-                    abordadoElement.style.opacity = '1';
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao deletar abordado: ' + error.message);
-                // Restaurar opacidade
-                abordadoElement.style.opacity = '1';
-            });
-        }
-    }
-
-    function carregarAbordagens(abordadoId, index) {
-        const abordagensList = document.getElementById(`abordagensList${index}`);
-        
-        // Verificar se as abordagens já foram carregadas
-        if (abordagensList.getAttribute('data-loaded') === 'true') {
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function deletePhoto(photoUrl, abordadoId) {
+    if (confirm('Tem certeza que deseja deletar esta foto?')) {
+        // Encontrar o elemento da foto
+        const photoElement = document.querySelector(`img[src="${photoUrl}"]`);
+        if (!photoElement) {
+            console.error('Elemento da foto não encontrado');
             return;
         }
         
-        fetch(`/get_abordagens/${abordadoId}`)
-            .then(response => response.json())
-            .then(abordagens => {
-                let html = '';
-                if (abordagens && abordagens.length > 0) {
-                    abordagens.forEach(abordagem => {
-                        html += `
-                            <div class="abordagem-card mb-3">
-                                <div class="abordagem-info">
-                                    <div class="abordagem-data">
-                                        <i class="far fa-calendar"></i>
-                                        <span>${abordagem.data_hora}</span>
-                                    </div>
-                                    <div class="abordagem-local">
-                                        <i class="fas fa-map-marker-alt"></i>
-                                        <span>${abordagem.local}</span>
-                                    </div>`;
+        // Encontrar o elemento pai (div.col-6)
+        const photoContainer = photoElement.closest('.col-6');
+        if (!photoContainer) {
+            console.error('Container da foto não encontrado');
+            return;
+        }
+        
+        // Adicionar classe de loading
+        photoContainer.style.opacity = '0.5';
+        
+        fetch('/delete_photo', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                photo_url: photoUrl,
+                abordado_id: abordadoId,
+            }),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erro na resposta do servidor');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Remover o elemento da foto com animação
+                photoContainer.style.transition = 'all 0.3s ease';
+                photoContainer.style.opacity = '0';
+                photoContainer.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    photoContainer.remove();
+                    
+                    // Verificar se era a última foto
+                    const photosContainer = photoContainer.closest('.row');
+                    if (photosContainer && photosContainer.children.length === 0) {
+                        photosContainer.innerHTML = '<div class="col-12 text-center text-muted">' +
+                            '<i class="fas fa-info-circle me-2"></i>Nenhuma foto adicional registrada</div>';
+                    }
+                }, 300);
+            } else {
+                alert('Erro ao deletar foto: ' + (data.error || 'Erro desconhecido'));
+                // Restaurar opacidade
+                photoContainer.style.opacity = '1';
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao deletar foto: ' + error.message);
+            // Restaurar opacidade
+            photoContainer.style.opacity = '1';
+        });
+    }
+}
+
+function downloadPhoto(url) {
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // Extrair o nome do arquivo da URL
+    let filename = 'foto';
+    if (url.includes('/')) {
+        filename = url.split('/').pop();
+    }
+    if (!filename.includes('.')) {
+        filename += '.jpg';
+    }
+    
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Novas funções para o menu lateral
+function toggleSidebar() {
+    document.querySelector('.sidebar').classList.toggle('active');
+    document.querySelector('.main-content').classList.toggle('sidebar-active');
+}
+
+function exportarDados() {
+    alert('Funcionalidade de exportação em desenvolvimento');
+}
+
+function abrirConfiguracoes() {
+    alert('Configurações em desenvolvimento');
+}
+
+// Fechar menu lateral ao clicar fora em dispositivos móveis
+document.addEventListener('click', function(event) {
+    const sidebar = document.querySelector('.sidebar');
+    const menuToggle = document.querySelector('.menu-toggle');
+    
+    if (window.innerWidth <= 768) {
+        if (!sidebar.contains(event.target) && !menuToggle.contains(event.target) && sidebar.classList.contains('active')) {
+            toggleSidebar();
+        }
+    }
+});
+
+function deleteVeiculo(veiculoId, veiculoNome) {
+    if (confirm(`Tem certeza que deseja deletar o veículo ${veiculoNome}?`)) {
+        // Encontrar o elemento do veículo usando um seletor mais específico
+        const veiculoElement = document.querySelector(`.vehicle-item button[onclick*="'${veiculoId}'"]`).closest('.vehicle-item');
+        if (!veiculoElement) {
+            console.error('Elemento do veículo não encontrado');
+            return;
+        }
+        
+        // Adicionar classe de loading
+        veiculoElement.style.opacity = '0.5';
+        
+        fetch('/delete_veiculo', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                veiculo_id: veiculoId
+            }),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erro na resposta do servidor');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Remover o elemento do veículo com animação
+                veiculoElement.style.transition = 'all 0.3s ease';
+                veiculoElement.style.opacity = '0';
+                veiculoElement.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    veiculoElement.remove();
+                    
+                    // Verificar se era o último veículo
+                    const veiculosContainer = veiculoElement.closest('.vehicles-section');
+                    const outrosVeiculos = veiculosContainer.querySelectorAll('.vehicle-item');
+                    if (outrosVeiculos.length === 0) {
+                        const noVeiculosDiv = document.createElement('div');
+                        noVeiculosDiv.className = 'vehicle-item';
+                        noVeiculosDiv.innerHTML = `
+                            <i class="fas fa-car"></i>
+                            <span>Nenhum veículo registrado</span>
+                        `;
+                        veiculosContainer.appendChild(noVeiculosDiv);
+                    }
+                }, 300);
+            } else {
+                alert('Erro ao deletar veículo: ' + (data.error || 'Erro desconhecido'));
+                // Restaurar opacidade
+                veiculoElement.style.opacity = '1';
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao deletar veículo: ' + error.message);
+            // Restaurar opacidade
+            veiculoElement.style.opacity = '1';
+        });
+    }
+}
+
+function deleteParente(parenteId, parenteNome) {
+    if (confirm(`Tem certeza que deseja deletar o parente ${parenteNome}?`)) {
+        // Encontrar o elemento do parente usando um seletor mais específico
+        const parenteElement = document.querySelector(`.related-person-item button[onclick*="'${parenteId}'"]`).closest('.related-person-item');
+        if (!parenteElement) {
+            console.error('Elemento do parente não encontrado');
+            return;
+        }
+        
+        // Adicionar classe de loading
+        parenteElement.style.opacity = '0.5';
+        
+        fetch('/delete_parente', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                parente_id: parenteId
+            }),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erro na resposta do servidor');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Remover o elemento do parente com animação
+                parenteElement.style.transition = 'all 0.3s ease';
+                parenteElement.style.opacity = '0';
+                parenteElement.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    parenteElement.remove();
+                    
+                    // Verificar se era o último parente
+                    const parentesContainer = parenteElement.closest('.related-people-section');
+                    const outrosParentes = parentesContainer.querySelectorAll('.related-person-item');
+                    if (outrosParentes.length === 0) {
+                        const noParentesDiv = document.createElement('div');
+                        noParentesDiv.className = 'related-person-item';
+                        noParentesDiv.innerHTML = `
+                            <i class="fas fa-user"></i>
+                            <span>Nenhum parente registrado</span>
+                        `;
+                        parentesContainer.appendChild(noParentesDiv);
+                    }
+                }, 300);
+            } else {
+                alert('Erro ao deletar parente: ' + (data.error || 'Erro desconhecido'));
+                // Restaurar opacidade
+                parenteElement.style.opacity = '1';
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao deletar parente: ' + error.message);
+            // Restaurar opacidade
+            parenteElement.style.opacity = '1';
+        });
+    }
+}
+
+function deleteAbordado(abordadoId, abordadoNome) {
+    if (confirm(`Tem certeza que deseja deletar o abordado ${abordadoNome}? Esta ação também removerá todos os veículos e parentes associados.`)) {
+        // Encontrar o elemento do abordado
+        const abordadoElement = document.querySelector(`button[onclick*="${abordadoId}"]`).closest('.card');
+        if (!abordadoElement) {
+            console.error('Elemento do abordado não encontrado');
+            return;
+        }
+        
+        // Adicionar classe de loading
+        abordadoElement.style.opacity = '0.5';
+        
+        fetch('/delete_abordado', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                abordado_id: abordadoId
+            }),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erro na resposta do servidor');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Remover o elemento do abordado com animação
+                abordadoElement.style.transition = 'all 0.3s ease';
+                abordadoElement.style.opacity = '0';
+                abordadoElement.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    abordadoElement.remove();
+                    
+                    // Verificar se era o último abordado
+                    const abordadosContainer = document.querySelector('.main-content');
+                    const outrosAbordados = abordadosContainer.querySelectorAll('.card');
+                    if (outrosAbordados.length === 0) {
+                        const noAbordadosDiv = document.createElement('div');
+                        noAbordadosDiv.className = 'alert alert-info';
+                        noAbordadosDiv.innerHTML = `
+                            <i class="fas fa-info-circle me-2"></i>
+                            Nenhum abordado registrado
+                        `;
+                        abordadosContainer.appendChild(noAbordadosDiv);
+                    }
+                }, 300);
+            } else {
+                alert('Erro ao deletar abordado: ' + (data.error || 'Erro desconhecido'));
+                // Restaurar opacidade
+                abordadoElement.style.opacity = '1';
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao deletar abordado: ' + error.message);
+            // Restaurar opacidade
+            abordadoElement.style.opacity = '1';
+        });
+    }
+}
+
+function carregarAbordagens(abordadoId, index) {
+    const abordagensList = document.getElementById(`abordagensList${index}`);
+    
+    // Verificar se as abordagens já foram carregadas
+    if (abordagensList.getAttribute('data-loaded') === 'true') {
+        return;
+    }
+    
+    fetch(`/get_abordagens/${abordadoId}`)
+        .then(response => response.json())
+        .then(abordagens => {
+            let html = '';
+            if (abordagens && abordagens.length > 0) {
+                abordagens.forEach(abordagem => {
+                    html += `
+                        <div class="abordagem-card mb-3">
+                            <div class="abordagem-info">
+                                <div class="abordagem-data">
+                                    <i class="far fa-calendar"></i>
+                                    <span>${abordagem.data_hora}</span>
+                                </div>
+                                <div class="abordagem-local">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>${abordagem.local}</span>
+                                </div>`;
                         
                         if (abordagem.outros_abordados && abordagem.outros_abordados.length > 0) {
                             html += `<div class="outros-abordados mt-2">`;
@@ -841,18 +823,18 @@
                         
                         html += `</div></div>`;
                     });
-                } else {
-                    html = '<p class="text-muted">Nenhuma abordagem registrada</p>';
-                }
-                
-                abordagensList.innerHTML = html;
-                abordagensList.setAttribute('data-loaded', 'true');
-            })
-            .catch(error => {
-                console.error('Erro ao carregar abordagens:', error);
-                abordagensList.innerHTML = '<p class="text-danger">Erro ao carregar abordagens</p>';
-            });
-    }
-    </script>
+            } else {
+                html = '<p class="text-muted">Nenhuma abordagem registrada</p>';
+            }
+            
+            abordagensList.innerHTML = html;
+            abordagensList.setAttribute('data-loaded', 'true');
+        })
+        .catch(error => {
+            console.error('Erro ao carregar abordagens:', error);
+            abordagensList.innerHTML = '<p class="text-danger">Erro ao carregar abordagens</p>';
+        });
+}
+</script>
 </body>
 </html> 
