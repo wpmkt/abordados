@@ -1100,178 +1100,190 @@ def editar_parente(parente_id):
 @app.route('/delete_abordado', methods=['POST'])
 def delete_abordado():
     try:
-        result = delete_abordado_interno()
-        if result.get('success'):
-            # Invalidar cache após deletar
-            sheets_cache.invalidate()
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-def delete_abordado_interno():
-    try:
         data = request.get_json()
         abordado_id = data.get('abordado_id')
         
         if not abordado_id:
             return jsonify({'success': False, 'error': 'ID do abordado não fornecido'}), 400
-            
-        print(f"DEBUG - Tentando deletar abordado ID: {abordado_id}")
-        
-        # Buscar dados atuais do abordado
+
         service = get_google_sheets_service()
         sheet = service.spreadsheets()
-        
+
+        # Buscar dados atuais
+        result = sheet.values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range='Abordados!A2:Z'
+        ).execute()
+        rows = result.get('values', [])
+
+        # Encontrar a linha do abordado
+        row_index = None
+        for i, row in enumerate(rows):
+            if row and row[0] == str(abordado_id):
+                row_index = i + 2  # +2 porque começamos da linha 2 e o índice é 0-based
+                break
+
+        if row_index is None:
+            return jsonify({'success': False, 'error': 'Abordado não encontrado'}), 404
+
+        # Limpar a linha no Google Sheets
+        range_name = f'Abordados!A{row_index}:Z{row_index}'
+        body = {
+            'values': [['' for _ in range(26)]]  # Limpar todas as colunas
+        }
+        service.spreadsheets().values().update(
+            spreadsheetId=SPREADSHEET_ID,
+            range=range_name,
+            valueInputOption='RAW',
+            body=body
+        ).execute()
+
+        # Invalidar cache após deletar
+        sheets_cache.invalidate()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/editar_abordado/<int:abordado_id>', methods=['GET', 'POST'])
+def editar_abordado(abordado_id):
+    try:
+        service = get_sheets_service()
+        sheet = service.spreadsheets()
+
         # Buscar dados do abordado
         result = sheet.values().get(
             spreadsheetId=SPREADSHEET_ID,
-            range=f'Abordados!A{int(abordado_id)+1}:M{int(abordado_id)+1}'
+            range='Abordados!A2:Z'
         ).execute()
-        
-        if not result.get('values'):
-            return jsonify({'success': False, 'error': 'Abordado não encontrado'}), 404
-            
-        abordado_data = result.get('values')[0]
-        
-        # Deletar fotos do abordado
-        deleted_files = []
-        failed_files = []
-        
-        # Foto de perfil
-        if len(abordado_data) > 9 and abordado_data[9]:  # Índice 9 é a coluna J - Foto Perfil
-            foto_perfil = abordado_data[9]
-            if foto_perfil.startswith('/static/uploads/'):
-                file_path = os.path.join(app.root_path, foto_perfil.lstrip('/'))
-                file_path = file_path.replace('\\', '/')
-                try:
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-                        deleted_files.append(file_path)
-                except Exception as e:
-                    failed_files.append(file_path)
-                    print(f"ERRO ao deletar foto de perfil: {str(e)}")
-        
-        # Fotos adicionais
-        if len(abordado_data) > 8 and abordado_data[8]:  # Índice 8 é a coluna I - Fotos
-            fotos = [f.strip() for f in abordado_data[8].split(';') if f.strip()]
-            for foto in fotos:
-                if foto.startswith('/static/uploads/'):
-                    file_path = os.path.join(app.root_path, foto.lstrip('/'))
-                    file_path = file_path.replace('\\', '/')
-                    try:
-                        if os.path.exists(file_path):
-                            os.remove(file_path)
-                            deleted_files.append(file_path)
-                    except Exception as e:
-                        failed_files.append(file_path)
-                        print(f"ERRO ao deletar foto: {str(e)}")
-        
-        # Buscar e deletar veículos associados
-        result = sheet.values().get(
-            spreadsheetId=SPREADSHEET_ID,
-            range='Veículos!A:F'
-        ).execute()
-        
-        deleted_veiculos = []
-        if result.get('values'):
-            veiculos = result.get('values')[1:]  # Pular cabeçalho
-            for i, veiculo in enumerate(veiculos, 2):  # Começar do índice 2 por causa do cabeçalho
-                if len(veiculo) > 5 and veiculo[5] == abordado_id:  # Índice 5 é a coluna F - ID_Abordado
-                    # Limpar linha do veículo
-                    sheet.values().clear(
-                        spreadsheetId=SPREADSHEET_ID,
-                        range=f'Veículos!A{i}:F{i}'
-                    ).execute()
-                    deleted_veiculos.append(veiculo[0])  # Guardar ID do veículo deletado
-                    print(f"DEBUG - Veículo ID {veiculo[0]} deletado")
-        
-        # Buscar e deletar parentes associados
-        result = sheet.values().get(
-            spreadsheetId=SPREADSHEET_ID,
-            range='Parentes!A:L'
-        ).execute()
-        
-        deleted_parentes = []
-        if result.get('values'):
-            parentes = result.get('values')[1:]  # Pular cabeçalho
-            for i, parente in enumerate(parentes, 2):  # Começar do índice 2 por causa do cabeçalho
-                if len(parente) > 11 and parente[11] == abordado_id:  # Índice 11 é a coluna L - ID_Abordado
-                    # Deletar fotos do parente
-                    if len(parente) > 9 and parente[9]:  # Foto de perfil
-                        foto_perfil = parente[9]
-                        if foto_perfil.startswith('/static/uploads/'):
-                            file_path = os.path.join(app.root_path, foto_perfil.lstrip('/'))
-                            file_path = file_path.replace('\\', '/')
-                            try:
-                                if os.path.exists(file_path):
-                                    os.remove(file_path)
-                                    deleted_files.append(file_path)
-                                    print(f"DEBUG - Foto de perfil do parente deletada: {file_path}")
-                            except Exception as e:
-                                failed_files.append(file_path)
-                                print(f"ERRO ao deletar foto de perfil do parente: {str(e)}")
-                    
-                    if len(parente) > 8 and parente[8]:  # Fotos adicionais
-                        fotos = [f.strip() for f in parente[8].split(';') if f.strip()]
-                        for foto in fotos:
-                            if foto.startswith('/static/uploads/'):
-                                file_path = os.path.join(app.root_path, foto.lstrip('/'))
-                                file_path = file_path.replace('\\', '/')
-                                try:
-                                    if os.path.exists(file_path):
-                                        os.remove(file_path)
-                                        deleted_files.append(file_path)
-                                        print(f"DEBUG - Foto adicional do parente deletada: {file_path}")
-                                except Exception as e:
-                                    failed_files.append(file_path)
-                                    print(f"ERRO ao deletar foto adicional do parente: {str(e)}")
-                    
-                    # Limpar linha do parente
-                    sheet.values().clear(
-                        spreadsheetId=SPREADSHEET_ID,
-                        range=f'Parentes!A{i}:L{i}'
-                    ).execute()
-                    deleted_parentes.append(parente[0])  # Guardar ID do parente deletado
-                    print(f"DEBUG - Parente ID {parente[0]} deletado")
-        
-        # Finalmente, deletar o abordado
-        sheet.values().clear(
-            spreadsheetId=SPREADSHEET_ID,
-            range=f'Abordados!A{int(abordado_id)+1}:M{int(abordado_id)+1}'
-        ).execute()
-        
-        print(f"DEBUG - Abordado ID {abordado_id} deletado com sucesso")
-        print(f"DEBUG - Arquivos deletados: {deleted_files}")
-        if failed_files:
-            print(f"DEBUG - Arquivos que falharam ao deletar: {failed_files}")
-        print(f"DEBUG - Veículos deletados: {deleted_veiculos}")
-        print(f"DEBUG - Parentes deletados: {deleted_parentes}")
-        
-        return jsonify({
-            'success': True,
-            'deleted_files': deleted_files,
-            'failed_files': failed_files,
-            'deleted_veiculos': deleted_veiculos,
-            'deleted_parentes': deleted_parentes
-        })
-        
-    except Exception as e:
-        print(f'ERRO ao deletar abordado: {str(e)}')
-        import traceback
-        print(f'Traceback completo: {traceback.format_exc()}')
-        return jsonify({'success': False, 'error': str(e)}), 500
+        rows = result.get('values', [])
 
-@app.route('/editar_abordado/<abordado_id>', methods=['GET', 'POST'])
-def editar_abordado(abordado_id):
-    form = AbordadoForm()
-    return_to = request.args.get('return_to')
-    
-    try:
-        if request.method == 'POST':
-            # Se for POST e sucesso, invalidar cache
+        # Encontrar o abordado pelo ID
+        abordado = None
+        row_index = None
+        for i, row in enumerate(rows):
+            if row and row[0] == str(abordado_id):
+                abordado = row
+                row_index = i + 2  # +2 porque começamos da linha 2 e o índice é 0-based
+                break
+
+        if not abordado:
+            flash('Abordado não encontrado', 'error')
+            return redirect(url_for('index'))
+
+        form = AbordadoForm()
+
+        if request.method == 'POST' and form.validate_on_submit():
+            # Processar a foto de perfil
+            foto_perfil = request.files.get('foto_perfil')
+            if foto_perfil and foto_perfil.filename:
+                filename = secure_filename(f"{uuid.uuid4()}_{foto_perfil.filename}")
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                foto_perfil.save(filepath)
+                foto_perfil_url = f"/static/uploads/{filename}"
+            else:
+                foto_perfil_url = abordado[7] if len(abordado) > 7 else ''
+
+            # Processar fotos adicionais
+            fotos = request.files.getlist('fotos')
+            fotos_urls = []
+            if fotos:
+                for foto in fotos:
+                    if foto and foto.filename:
+                        filename = secure_filename(f"{uuid.uuid4()}_{foto.filename}")
+                        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        foto.save(filepath)
+                        fotos_urls.append(f"/static/uploads/{filename}")
+
+            # Se já existem fotos, adicionar às novas
+            if len(abordado) > 8 and abordado[8]:
+                fotos_existentes = abordado[8].split(',')
+                fotos_urls = fotos_existentes + fotos_urls
+
+            # Processar veículos
+            veiculos = []
+            marcas = request.form.getlist('veiculo_marca[]')
+            modelos = request.form.getlist('veiculo_modelo[]')
+            cores = request.form.getlist('veiculo_cor[]')
+            placas = request.form.getlist('veiculo_placa[]')
+
+            for i in range(len(marcas)):
+                if marcas[i] or modelos[i] or cores[i] or placas[i]:
+                    veiculo = {
+                        'marca': marcas[i],
+                        'modelo': modelos[i],
+                        'cor': cores[i],
+                        'placa': placas[i]
+                    }
+                    veiculos.append(veiculo)
+
+            # Atualizar dados no Google Sheets
+            valores_atualizados = [
+                str(abordado_id),
+                form.nome.data,
+                form.nascimento.data,
+                form.mae.data,
+                form.pai.data,
+                form.rg.data,
+                form.cpf.data,
+                foto_perfil_url,
+                ','.join(fotos_urls) if fotos_urls else '',
+                json.dumps(veiculos) if veiculos else '',
+                form.telefone.data,
+                form.endereco.data,
+                form.anotacoes.data
+            ]
+
+            # Atualizar a linha no Google Sheets
+            range_name = f'Abordados!A{row_index}:M{row_index}'
+            body = {
+                'values': [valores_atualizados]
+            }
+            service.spreadsheets().values().update(
+                spreadsheetId=SPREADSHEET_ID,
+                range=range_name,
+                valueInputOption='RAW',
+                body=body
+            ).execute()
+
+            # Invalidar cache após atualização
             sheets_cache.invalidate()
-        # Resto do código existente
-        pass
+
+            flash('Abordado atualizado com sucesso!', 'success')
+            return redirect(url_for('index'))
+
+        # Preencher o formulário com os dados existentes
+        if request.method == 'GET':
+            form.nome.data = abordado[1]
+            form.nascimento.data = abordado[2]
+            form.mae.data = abordado[3]
+            form.pai.data = abordado[4]
+            form.rg.data = abordado[5]
+            form.cpf.data = abordado[6]
+            form.telefone.data = abordado[10] if len(abordado) > 10 else ''
+            form.endereco.data = abordado[11] if len(abordado) > 11 else ''
+            form.anotacoes.data = abordado[12] if len(abordado) > 12 else ''
+
+            # Processar veículos existentes
+            veiculos = []
+            if len(abordado) > 9 and abordado[9]:
+                try:
+                    veiculos = json.loads(abordado[9])
+                except:
+                    veiculos = []
+
+            # Processar fotos existentes
+            foto_perfil = abordado[7] if len(abordado) > 7 else ''
+            fotos = abordado[8].split(',') if len(abordado) > 8 and abordado[8] else []
+
+            return render_template('editar_abordado.html', 
+                                form=form, 
+                                abordado_id=abordado_id,
+                                foto_perfil=foto_perfil,
+                                fotos=fotos,
+                                veiculos=veiculos)
+
     except Exception as e:
         flash(f'Erro ao editar abordado: {str(e)}', 'error')
         return redirect(url_for('index'))

@@ -8,6 +8,22 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" rel="stylesheet">
     <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+        .container {
+            flex: 1;
+            padding-bottom: 2rem;
+            margin-bottom: 2rem;
+        }
         .profile-upload {
             width: 200px;
             height: 200px;
@@ -90,6 +106,24 @@
         }
         .cropper-toolbar button {
             margin: 0 0.5rem;
+        }
+        .form-container {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+            .row {
+                margin-left: -10px;
+                margin-right: -10px;
+            }
+            .col-md-6 {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
         }
     </style>
 </head>
