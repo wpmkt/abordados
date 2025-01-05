@@ -74,6 +74,48 @@ def save_uploaded_file(file, is_profile=False):
         print(f'ERRO ao converter arquivo para base64: {str(e)}')
         return None
 
+# Se as credenciais não estiverem no ambiente, usar os arquivos
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+SPREADSHEET_ID = '1S5N-VtBnzHV_Iq4eYDzvGSo3YnTqmWDDnZF_BLBqxAE'
+
+def get_google_sheets_service():
+    creds = None
+    
+    # Tentar carregar credenciais do ambiente primeiro
+    if os.environ.get('GOOGLE_CREDENTIALS') and os.environ.get('GOOGLE_TOKEN'):
+        try:
+            # Carregar credenciais do ambiente
+            creds_data = json.loads(os.environ.get('GOOGLE_CREDENTIALS', '{}'))
+            creds = Credentials.from_authorized_user_info(json.loads(os.environ.get('GOOGLE_TOKEN', '{}')), SCOPES)
+            
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+                
+        except Exception as e:
+            print(f"Erro ao carregar credenciais do ambiente: {str(e)}")
+            creds = None
+    
+    # Se não conseguiu carregar do ambiente, tentar dos arquivos
+    if not creds:
+        if os.path.exists('token.pickle'):
+            with open('token.pickle', 'rb') as token:
+                creds = pickle.load(token)
+        
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+                creds = flow.run_local_server(port=0)
+            with open('token.pickle', 'wb') as token:
+                pickle.dump(creds, token)
+    
+    return build('sheets', 'v4', credentials=creds)
+
+@app.route('/nova_abordagem')
+def nova_abordagem():
+    return render_template('nova_abordagem.html')
+
 def get_abordados():
     try:
         # Tentar obter do cache primeiro
