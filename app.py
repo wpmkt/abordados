@@ -129,3 +129,8 @@ def get_abordados():
     except Exception as e:
         print(f'ERRO ao buscar abordados: {str(e)}')
         return [] 
+
+@app.route('/')
+def index():
+    abordados = get_abordados()
+    return render_template('index.html', abordados=abordados) 
