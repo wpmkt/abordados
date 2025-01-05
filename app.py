@@ -74,47 +74,93 @@ def save_uploaded_file(file, is_profile=False):
         print(f'ERRO ao converter arquivo para base64: {str(e)}')
         return None
 
-# Se as credenciais não estiverem no ambiente, usar os arquivos
+# Configurações do Google Sheets
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 SPREADSHEET_ID = '1S5N-VtBnzHV_Iq4eYDzvGSo3YnTqmWDDnZF_BLBqxAE'
 
 def get_google_sheets_service():
     creds = None
+    try:
+        # Tentar carregar credenciais do ambiente
+        if os.environ.get('GOOGLE_TOKEN'):
+            token_info = json.loads(os.environ.get('GOOGLE_TOKEN'))
+            creds = Credentials.from_authorized_user_info(token_info, SCOPES)
+    except Exception as e:
+        print(f"Erro ao carregar credenciais do ambiente: {str(e)}")
     
-    # Tentar carregar credenciais do ambiente primeiro
-    if os.environ.get('GOOGLE_CREDENTIALS') and os.environ.get('GOOGLE_TOKEN'):
-        try:
-            # Carregar credenciais do ambiente
-            creds_data = json.loads(os.environ.get('GOOGLE_CREDENTIALS', '{}'))
-            creds = Credentials.from_authorized_user_info(json.loads(os.environ.get('GOOGLE_TOKEN', '{}')), SCOPES)
-            
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-                
-        except Exception as e:
-            print(f"Erro ao carregar credenciais do ambiente: {str(e)}")
-            creds = None
-    
-    # Se não conseguiu carregar do ambiente, tentar dos arquivos
-    if not creds:
-        if os.path.exists('token.pickle'):
-            with open('token.pickle', 'rb') as token:
-                creds = pickle.load(token)
-        
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-                creds = flow.run_local_server(port=0)
-            with open('token.pickle', 'wb') as token:
-                pickle.dump(creds, token)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
     
     return build('sheets', 'v4', credentials=creds)
 
+@app.route('/')
+def index():
+    abordados = get_abordados()
+    return render_template('index.html', abordados=abordados)
+
+@app.route('/novo_abordado')
+def novo_abordado():
+    form = AbordadoForm()
+    return render_template('novo.html', form=form)
+
 @app.route('/nova_abordagem')
 def nova_abordagem():
-    return render_template('nova_abordagem.html')
+    form = AbordagemForm()
+    return render_template('nova_abordagem.html', form=form)
+
+@app.route('/adicionar_veiculo/<int:abordado_id>')
+def adicionar_veiculo(abordado_id):
+    form = VeiculoForm()
+    return render_template('adicionar_veiculo.html', form=form, abordado_id=abordado_id)
+
+@app.route('/adicionar_parente/<int:abordado_id>')
+def adicionar_parente(abordado_id):
+    form = ParenteForm()
+    return render_template('adicionar_parente.html', form=form, abordado_id=abordado_id)
+
+@app.route('/editar_abordado/<int:abordado_id>')
+def editar_abordado(abordado_id):
+    form = AbordadoForm()
+    abordado = buscar_abordado_por_id(abordado_id)
+    if abordado:
+        return render_template('editar_abordado.html', form=form, abordado=abordado)
+    return redirect(url_for('index'))
+
+def buscar_abordado_por_id(abordado_id):
+    try:
+        service = get_google_sheets_service()
+        sheet = service.spreadsheets()
+        
+        result = sheet.values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range='Abordados!A:M'
+        ).execute()
+        
+        if not result.get('values'):
+            return None
+            
+        for row in result.get('values')[1:]:
+            if row and row[0] == str(abordado_id):
+                return {
+                    'ID': row[0],
+                    'Nome': row[1],
+                    'Mae': row[2] if len(row) > 2 else '',
+                    'Pai': row[3] if len(row) > 3 else '',
+                    'Nascimento': row[4] if len(row) > 4 else '',
+                    'RG': row[5] if len(row) > 5 else '',
+                    'CPF': row[6] if len(row) > 6 else '',
+                    'Endereço': row[7] if len(row) > 7 else '',
+                    'Telefone': row[8] if len(row) > 8 else '',
+                    'Foto Perfil': row[9] if len(row) > 9 else '',
+                    'Fotos': row[10].split(';') if len(row) > 10 and row[10] else [],
+                    'Anotações': row[12] if len(row) > 12 else ''
+                }
+        return None
+        
+    except Exception as e:
+        print(f'ERRO ao buscar abordado: {str(e)}')
+        return None
 
 def get_abordados():
     try:
@@ -136,7 +182,7 @@ def get_abordados():
             
         # Pular o cabeçalho
         abordados = []
-        for row in result.get('values')[1:]:  # Pula a primeira linha (cabeçalho)
+        for row in result.get('values')[1:]:
             if row and len(row) >= 2 and row[0].strip() and row[1].strip():
                 foto_perfil = row[9] if len(row) > 9 else ''
                 fotos = row[10] if len(row) > 10 else ''
@@ -155,11 +201,11 @@ def get_abordados():
                     'Endereço': row[7] if len(row) > 7 else '',
                     'Telefone': row[8] if len(row) > 8 else '',
                     'Foto Perfil': foto_perfil,
-                    'Fotos': fotos_lista,  # Agora é uma lista de URLs
+                    'Fotos': fotos_lista,
                     'Anotações': row[12] if len(row) > 12 else '',
-                    'Parentes': [],  # Lista vazia para manter compatibilidade
-                    'Veiculos': [],  # Lista vazia para manter compatibilidade
-                    'Abordagens': []  # Inicialmente vazio, será carregado sob demanda
+                    'Parentes': [],
+                    'Veiculos': [],
+                    'Abordagens': []
                 }
                 
                 abordados.append(abordado)
@@ -171,8 +217,3 @@ def get_abordados():
     except Exception as e:
         print(f'ERRO ao buscar abordados: {str(e)}')
         return [] 
-
-@app.route('/')
-def index():
-    abordados = get_abordados()
-    return render_template('index.html', abordados=abordados) 
