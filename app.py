@@ -88,28 +88,43 @@ def get_google_sheets_service():
             return None
             
         try:
-            token_info = json.loads(token_str)
-            print(f"Token carregado com sucesso: {len(str(token_info))} caracteres")
-        except json.JSONDecodeError as je:
-            print(f"ERRO ao decodificar JSON do token: {str(je)}")
+            # Remover possíveis espaços em branco
+            token_str = token_str.strip()
+            
+            # Tentar decodificar o token base64
+            token_bytes = base64.b64decode(token_str)
+            creds = pickle.loads(token_bytes)
+            print("Token carregado com sucesso do formato base64/pickle")
+            
+        except Exception as e:
+            print(f"ERRO ao decodificar token base64: {str(e)}")
             print(f"Primeiros 100 caracteres do token: {token_str[:100]}")
             return None
             
-        creds = Credentials.from_authorized_user_info(token_info, SCOPES)
-        
-        if not creds:
-            print("ERRO: Não foi possível criar as credenciais")
+        if not creds or not isinstance(creds, Credentials):
+            print(f"ERRO: Token inválido. Tipo recebido: {type(creds)}")
             return None
             
         if not creds.valid:
             if creds.expired and creds.refresh_token:
                 print("Credenciais expiradas, tentando renovar...")
-                creds.refresh(Request())
+                try:
+                    creds.refresh(Request())
+                    print("Credenciais renovadas com sucesso")
+                except Exception as e:
+                    print(f"ERRO ao renovar credenciais: {str(e)}")
+                    return None
             else:
                 print("ERRO: Credenciais inválidas e não foi possível renovar")
                 return None
                 
-        return build('sheets', 'v4', credentials=creds)
+        try:
+            service = build('sheets', 'v4', credentials=creds)
+            print("Serviço do Google Sheets criado com sucesso")
+            return service
+        except Exception as e:
+            print(f"ERRO ao criar serviço do Google Sheets: {str(e)}")
+            return None
         
     except Exception as e:
         print(f"ERRO ao configurar serviço do Google Sheets: {str(e)}")
