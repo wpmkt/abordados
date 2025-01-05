@@ -128,6 +128,4 @@ def get_abordados():
         
     except Exception as e:
         print(f'ERRO ao buscar abordados: {str(e)}')
-        return []
-
-[... rest of the file remains unchanged ...] 
+        return [] 
