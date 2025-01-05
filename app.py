@@ -1215,129 +1215,115 @@ def editar_abordado(abordado_id):
         rows = result.get('values', [])
 
         # Encontrar o abordado pelo ID
-        abordado = None
+        abordado_data = None
         row_index = None
         for i, row in enumerate(rows):
             if row and row[0] == str(abordado_id):
-                abordado = row
+                abordado_data = row
                 row_index = i + 2  # +2 porque começamos da linha 2 e o índice é 0-based
                 break
 
-        if not abordado:
+        if not abordado_data:
             flash('Abordado não encontrado', 'error')
             return redirect(url_for('index'))
+
+        # Criar dicionário com os dados do abordado
+        abordado = {
+            'id': abordado_data[0],
+            'nome': abordado_data[1],
+            'nascimento': abordado_data[2] if len(abordado_data) > 2 else '',
+            'mae': abordado_data[3] if len(abordado_data) > 3 else '',
+            'pai': abordado_data[4] if len(abordado_data) > 4 else '',
+            'rg': abordado_data[5] if len(abordado_data) > 5 else '',
+            'cpf': abordado_data[6] if len(abordado_data) > 6 else '',
+            'telefone': abordado_data[7] if len(abordado_data) > 7 else '',
+            'endereco': abordado_data[8] if len(abordado_data) > 8 else '',
+            'foto_perfil': abordado_data[9] if len(abordado_data) > 9 else '',
+            'fotos': abordado_data[10] if len(abordado_data) > 10 else '',
+            'anotacoes': abordado_data[12] if len(abordado_data) > 12 else ''
+        }
 
         form = AbordadoForm()
 
         if request.method == 'POST' and form.validate_on_submit():
-            # Processar a foto de perfil
-            foto_perfil = request.files.get('foto_perfil')
-            if foto_perfil and foto_perfil.filename:
-                filename = secure_filename(f"{uuid.uuid4()}_{foto_perfil.filename}")
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                foto_perfil.save(filepath)
-                foto_perfil_url = f"/static/uploads/{filename}"
-            else:
-                foto_perfil_url = abordado[9] if len(abordado) > 9 else ''  # Índice 9 para Foto Perfil
+            try:
+                # Processar foto de perfil
+                foto_perfil_url = abordado['foto_perfil']  # Manter a foto atual por padrão
+                if 'foto_perfil' in request.files:
+                    file = request.files['foto_perfil']
+                    if file and file.filename != '':
+                        foto_perfil_url = save_uploaded_file(file, is_profile=True)
+                        if foto_perfil_url:
+                            foto_perfil_url = foto_perfil_url.replace('\\', '/')
 
-            # Processar fotos adicionais
-            fotos = request.files.getlist('fotos')
-            fotos_urls = []
-            if fotos:
-                for foto in fotos:
-                    if foto and foto.filename:
-                        filename = secure_filename(f"{uuid.uuid4()}_{foto.filename}")
-                        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                        foto.save(filepath)
-                        fotos_urls.append(f"/static/uploads/{filename}")
+                # Processar fotos adicionais
+                fotos_urls = []
+                if 'fotos' in request.files:
+                    files = request.files.getlist('fotos')
+                    for file in files:
+                        if file and file.filename != '':
+                            url = save_uploaded_file(file)
+                            if url:
+                                fotos_urls.append(url.replace('\\', '/'))
 
-            # Se já existem fotos, adicionar às novas
-            if len(abordado) > 8 and abordado[8]:
-                fotos_existentes = abordado[8].split(';')  # Usando ; como separador
-                fotos_urls = fotos_existentes + fotos_urls
+                # Manter fotos existentes que não foram removidas
+                if abordado['fotos']:
+                    fotos_existentes = [f for f in abordado['fotos'].split(';') if f]
+                    removed_photos = request.form.get('removed_photos', '').split(';')
+                    fotos_urls = [f for f in fotos_existentes if f not in removed_photos] + fotos_urls
 
-            # Processar veículos
-            veiculos = []
-            marcas = request.form.getlist('veiculo_marca[]')
-            modelos = request.form.getlist('veiculo_modelo[]')
-            cores = request.form.getlist('veiculo_cor[]')
-            placas = request.form.getlist('veiculo_placa[]')
+                # Atualizar dados no Google Sheets
+                valores_atualizados = [
+                    str(abordado_id),  # ID
+                    form.nome.data,    # Nome
+                    form.nascimento.data,  # Data de Nascimento
+                    form.mae.data,     # Nome da Mãe
+                    form.pai.data,     # Nome do Pai
+                    form.rg.data,      # RG
+                    form.cpf.data,     # CPF
+                    form.telefone.data,  # Telefone
+                    form.endereco.data,  # Endereço
+                    foto_perfil_url,   # Foto Perfil
+                    ';'.join(fotos_urls) if fotos_urls else '',  # Fotos
+                    '',  # Veículos (mantido vazio por enquanto)
+                    form.anotacoes.data  # Anotações
+                ]
 
-            for i in range(len(marcas)):
-                if marcas[i] or modelos[i] or cores[i] or placas[i]:
-                    veiculo = {
-                        'marca': marcas[i],
-                        'modelo': modelos[i],
-                        'cor': cores[i],
-                        'placa': placas[i]
-                    }
-                    veiculos.append(veiculo)
+                range_name = f'Abordados!A{row_index}:M{row_index}'
+                body = {
+                    'values': [valores_atualizados]
+                }
+                service.spreadsheets().values().update(
+                    spreadsheetId=SPREADSHEET_ID,
+                    range=range_name,
+                    valueInputOption='RAW',
+                    body=body
+                ).execute()
 
-            # Atualizar dados no Google Sheets
-            valores_atualizados = [
-                str(abordado_id),  # ID
-                form.nome.data,    # Nome
-                form.nascimento.data,  # Data de Nascimento
-                form.mae.data,     # Nome da Mãe
-                form.pai.data,     # Nome do Pai
-                form.rg.data,      # RG
-                form.cpf.data,     # CPF
-                form.telefone.data,  # Telefone
-                form.endereco.data,  # Endereço
-                foto_perfil_url,   # Foto Perfil
-                ';'.join(fotos_urls) if fotos_urls else '',  # Fotos (usando ; como separador)
-                json.dumps(veiculos) if veiculos else '',  # Veículos
-                form.anotacoes.data  # Anotações
-            ]
+                # Invalidar cache após atualização
+                sheets_cache.invalidate()
 
-            # Atualizar a linha no Google Sheets
-            range_name = f'Abordados!A{row_index}:M{row_index}'
-            body = {
-                'values': [valores_atualizados]
-            }
-            service.spreadsheets().values().update(
-                spreadsheetId=SPREADSHEET_ID,
-                range=range_name,
-                valueInputOption='RAW',
-                body=body
-            ).execute()
+                flash('Abordado atualizado com sucesso!', 'success')
+                return redirect(url_for('index'))
 
-            # Invalidar cache após atualização
-            sheets_cache.invalidate()
-
-            flash('Abordado atualizado com sucesso!', 'success')
-            return redirect(url_for('index'))
+            except Exception as e:
+                print(f'ERRO ao atualizar abordado: {str(e)}')
+                flash('Erro ao atualizar abordado.', 'error')
+                return render_template('editar_abordado.html', form=form, abordado=abordado)
 
         # Preencher o formulário com os dados existentes
         if request.method == 'GET':
-            form.nome.data = abordado[1]      # Nome
-            form.nascimento.data = abordado[2] # Data de Nascimento
-            form.mae.data = abordado[3]       # Nome da Mãe
-            form.pai.data = abordado[4]       # Nome do Pai
-            form.rg.data = abordado[5]        # RG
-            form.cpf.data = abordado[6]       # CPF
-            form.telefone.data = abordado[7]  # Telefone
-            form.endereco.data = abordado[8]  # Endereço
-            form.anotacoes.data = abordado[12] if len(abordado) > 12 else ''  # Anotações
+            form.nome.data = abordado['nome']
+            form.nascimento.data = abordado['nascimento']
+            form.mae.data = abordado['mae']
+            form.pai.data = abordado['pai']
+            form.rg.data = abordado['rg']
+            form.cpf.data = abordado['cpf']
+            form.telefone.data = abordado['telefone']
+            form.endereco.data = abordado['endereco']
+            form.anotacoes.data = abordado['anotacoes']
 
-            # Processar veículos existentes
-            veiculos = []
-            if len(abordado) > 11 and abordado[11]:
-                try:
-                    veiculos = json.loads(abordado[11])
-                except:
-                    veiculos = []
-
-            # Processar fotos existentes
-            foto_perfil = abordado[9] if len(abordado) > 9 else ''  # Foto Perfil
-            fotos = abordado[10].split(';') if len(abordado) > 10 and abordado[10] else []  # Fotos
-
-            return render_template('editar_abordado.html', 
-                                form=form, 
-                                abordado_id=abordado_id,
-                                foto_perfil=foto_perfil,
-                                fotos=fotos,
-                                veiculos=veiculos)
+        return render_template('editar_abordado.html', form=form, abordado=abordado)
 
     except Exception as e:
         import traceback
