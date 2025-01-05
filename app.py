@@ -283,8 +283,12 @@ def get_abordados():
         abordados = []
         for row in result.get('values')[1:]:  # Pula a primeira linha (cabeçalho)
             if row and len(row) >= 2 and row[0].strip() and row[1].strip():
-                foto_original = row[9] if len(row) > 9 else ''
-                foto_convertida = foto_original.replace('\\', '/') if foto_original else ''
+                foto_perfil = row[9] if len(row) > 9 else ''
+                fotos = row[10] if len(row) > 10 else ''
+                
+                # Converter URLs das fotos
+                foto_perfil = foto_perfil.replace('\\', '/') if foto_perfil else ''
+                fotos = fotos.replace('\\', '/') if fotos else ''
                 
                 abordado = {
                     'ID': row[0],
@@ -295,9 +299,10 @@ def get_abordados():
                     'RG': row[5] if len(row) > 5 else '',
                     'CPF': row[6] if len(row) > 6 else '',
                     'Endereço': row[7] if len(row) > 7 else '',
-                    'Fotos': row[8] if len(row) > 8 else '',
-                    'Foto Perfil': foto_convertida,
-                    'Anotações': row[11] if len(row) > 11 else '',
+                    'Telefone': row[8] if len(row) > 8 else '',
+                    'Foto Perfil': foto_perfil,
+                    'Fotos': fotos,
+                    'Anotações': row[12] if len(row) > 12 else '',
                     'Parentes': [],  # Lista vazia para manter compatibilidade
                     'Veiculos': [],  # Lista vazia para manter compatibilidade
                     'Abordagens': []  # Inicialmente vazio, será carregado sob demanda
