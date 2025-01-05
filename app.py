@@ -76,7 +76,7 @@ def save_uploaded_file(file, is_profile=False):
 
 # Configurações do Google Sheets
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-SPREADSHEET_ID = '1S5N-VtBnzHV_Iq4eYDzvGSo3YnTqmWDDnZF_BLBqxAE'
+SPREADSHEET_ID = '1zFWzO-5Gz8HLazjM1k8FoybW5OqX3LCM28pcdmQWQHw'
 
 def get_google_sheets_service():
     creds = None
