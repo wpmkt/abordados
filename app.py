@@ -82,17 +82,38 @@ def get_google_sheets_service():
     creds = None
     try:
         # Tentar carregar credenciais do ambiente
-        if os.environ.get('GOOGLE_TOKEN'):
-            token_info = json.loads(os.environ.get('GOOGLE_TOKEN'))
-            creds = Credentials.from_authorized_user_info(token_info, SCOPES)
+        token_str = os.environ.get('GOOGLE_TOKEN')
+        if not token_str:
+            print("ERRO: Variável GOOGLE_TOKEN não encontrada no ambiente")
+            return None
+            
+        try:
+            token_info = json.loads(token_str)
+            print(f"Token carregado com sucesso: {len(str(token_info))} caracteres")
+        except json.JSONDecodeError as je:
+            print(f"ERRO ao decodificar JSON do token: {str(je)}")
+            print(f"Primeiros 100 caracteres do token: {token_str[:100]}")
+            return None
+            
+        creds = Credentials.from_authorized_user_info(token_info, SCOPES)
+        
+        if not creds:
+            print("ERRO: Não foi possível criar as credenciais")
+            return None
+            
+        if not creds.valid:
+            if creds.expired and creds.refresh_token:
+                print("Credenciais expiradas, tentando renovar...")
+                creds.refresh(Request())
+            else:
+                print("ERRO: Credenciais inválidas e não foi possível renovar")
+                return None
+                
+        return build('sheets', 'v4', credentials=creds)
+        
     except Exception as e:
-        print(f"Erro ao carregar credenciais do ambiente: {str(e)}")
-    
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-    
-    return build('sheets', 'v4', credentials=creds)
+        print(f"ERRO ao configurar serviço do Google Sheets: {str(e)}")
+        return None
 
 @app.route('/')
 def index():
