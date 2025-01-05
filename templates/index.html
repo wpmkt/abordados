@@ -417,6 +417,107 @@
                         {% endif %}
                     </div>
 
+                    <!-- Seção de Parentes -->
+                    <div class="photos-section mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3" 
+                             data-bs-toggle="collapse" data-bs-target="#parentesCollapse{{ loop.index }}">
+                            <h6 class="mb-0">Parentes</h6>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="collapse" id="parentesCollapse{{ loop.index }}">
+                            <div class="parentes-grid">
+                                {% if abordado.get('Parentes') %}
+                                    {% for parente in abordado.get('Parentes') %}
+                                        <div class="parente-card">
+                                            <div class="parente-header">
+                                                {% if parente.get('Foto Perfil') %}
+                                                    <img src="{{ parente.get('Foto Perfil') }}" alt="Foto de {{ parente.get('Nome', '') }}">
+                                                {% else %}
+                                                    <div class="no-photo">
+                                                        <i class="fas fa-user"></i>
+                                                    </div>
+                                                {% endif %}
+                                                <div class="parente-info">
+                                                    <h6>{{ parente.get('Nome', '') }}</h6>
+                                                    <span class="badge bg-secondary">{{ parente.get('Parentesco', '') }}</span>
+                                                </div>
+                                                <div class="parente-actions">
+                                                    <a href="{{ url_for('editar_parente', parente_id=parente.get('ID', '')) }}" 
+                                                       class="btn btn-sm btn-outline-primary" title="Editar">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button class="btn btn-sm btn-outline-danger" title="Deletar"
+                                                            onclick="deleteParente('{{ parente.get('ID', '') }}', '{{ parente.get('Nome', '') }}')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">Nenhum parente cadastrado</p>
+                                {% endif %}
+                                <div class="mt-3">
+                                    <a href="{{ url_for('novo_parente', abordado_id=abordado.get('ID', '')) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-plus"></i> Adicionar Parente
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção de Abordagens -->
+                    <div class="abordagens-section mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3" 
+                             data-bs-toggle="collapse" data-bs-target="#abordagensCollapse{{ loop.index }}">
+                            <h6 class="mb-0">Abordagens</h6>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="collapse" id="abordagensCollapse{{ loop.index }}">
+                            <div class="abordagens-list">
+                                {% if abordado.get('Abordagens') %}
+                                    {% for abordagem in abordado.get('Abordagens') %}
+                                        <div class="abordagem-card mb-3">
+                                            <div class="abordagem-info">
+                                                <div class="abordagem-data">
+                                                    <i class="far fa-calendar"></i>
+                                                    <span>{{ abordagem.get('data_hora', '') }}</span>
+                                                </div>
+                                                <div class="abordagem-local">
+                                                    <i class="fas fa-map-marker-alt"></i>
+                                                    <span>{{ abordagem.get('local', '') }}</span>
+                                                </div>
+                                                {% if abordagem.get('outros_abordados') %}
+                                                    <div class="outros-abordados mt-2">
+                                                        {% for outro in abordagem.get('outros_abordados') %}
+                                                            <div class="outro-abordado d-flex align-items-center mb-2">
+                                                                {% if outro.get('foto_perfil') %}
+                                                                    <img src="{{ outro.get('foto_perfil') }}" 
+                                                                         alt="Foto de {{ outro.get('nome', '') }}"
+                                                                         class="rounded-circle me-2"
+                                                                         style="width: 30px; height: 30px; object-fit: cover;">
+                                                                {% else %}
+                                                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2"
+                                                                         style="width: 30px; height: 30px;">
+                                                                        <i class="fas fa-user text-white"></i>
+                                                                    </div>
+                                                                {% endif %}
+                                                                <span>{{ outro.get('nome', '') }}</span>
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">Nenhuma abordagem registrada</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Abordados Relacionados -->
                     {% if abordado['Abordados Relacionados'] %}
                     <div class="mt-3">

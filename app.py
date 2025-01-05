@@ -215,6 +215,52 @@ def get_abordados_relacionados(abordado_id):
         print(f'ERRO ao buscar abordados relacionados: {str(e)}')
         return []
 
+def get_abordagens_do_abordado(abordado_id):
+    try:
+        service = get_google_sheets_service()
+        sheet = service.spreadsheets()
+        
+        # Buscar todas as abordagens
+        result = sheet.values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range='Abordagens!A2:E'  # ID, Data/hora, Local, Abordados, Anotação
+        ).execute()
+        
+        if not result.get('values'):
+            return []
+            
+        abordagens = []
+        for row in result.get('values'):
+            if len(row) >= 4 and row[3]:  # Verificar se tem abordados
+                abordados_ids = row[3].split(';')
+                if str(abordado_id) in abordados_ids:
+                    # Buscar informações dos outros abordados
+                    outros_abordados = []
+                    for outro_id in abordados_ids:
+                        if outro_id != str(abordado_id):
+                            try:
+                                outro_abordado = buscar_abordado_por_id(outro_id)
+                                if outro_abordado:
+                                    outros_abordados.append(outro_abordado)
+                            except Exception as e:
+                                print(f"Erro ao buscar outro abordado {outro_id}: {str(e)}")
+                                continue
+                    
+                    abordagem = {
+                        'id': row[0],
+                        'data_hora': row[1],
+                        'local': row[2],
+                        'outros_abordados': outros_abordados,
+                        'anotacao': row[4] if len(row) > 4 else ''
+                    }
+                    abordagens.append(abordagem)
+        
+        return abordagens
+        
+    except Exception as e:
+        print(f'ERRO ao buscar abordagens do abordado {abordado_id}: {str(e)}')
+        return []
+
 def get_abordados():
     try:
         # Tentar obter do cache primeiro
@@ -254,7 +300,7 @@ def get_abordados():
                     'Anotações': row[11] if len(row) > 11 else '',
                     'Parentes': [],  # Lista vazia para manter compatibilidade
                     'Veiculos': [],  # Lista vazia para manter compatibilidade
-                    'Abordados Relacionados': []  # Vamos carregar sob demanda
+                    'Abordagens': get_abordagens_do_abordado(row[0])  # Carregar abordagens
                 }
                 
                 abordados.append(abordado)
@@ -1149,7 +1195,7 @@ def delete_abordado():
 @app.route('/editar_abordado/<int:abordado_id>', methods=['GET', 'POST'])
 def editar_abordado(abordado_id):
     try:
-        service = get_sheets_service()
+        service = get_google_sheets_service()
         sheet = service.spreadsheets()
 
         # Buscar dados do abordado
@@ -1183,7 +1229,7 @@ def editar_abordado(abordado_id):
                 foto_perfil.save(filepath)
                 foto_perfil_url = f"/static/uploads/{filename}"
             else:
-                foto_perfil_url = abordado[7] if len(abordado) > 7 else ''
+                foto_perfil_url = abordado[9] if len(abordado) > 9 else ''  # Índice 9 para Foto Perfil
 
             # Processar fotos adicionais
             fotos = request.files.getlist('fotos')
@@ -1198,7 +1244,7 @@ def editar_abordado(abordado_id):
 
             # Se já existem fotos, adicionar às novas
             if len(abordado) > 8 and abordado[8]:
-                fotos_existentes = abordado[8].split(',')
+                fotos_existentes = abordado[8].split(';')  # Usando ; como separador
                 fotos_urls = fotos_existentes + fotos_urls
 
             # Processar veículos
@@ -1220,19 +1266,19 @@ def editar_abordado(abordado_id):
 
             # Atualizar dados no Google Sheets
             valores_atualizados = [
-                str(abordado_id),
-                form.nome.data,
-                form.nascimento.data,
-                form.mae.data,
-                form.pai.data,
-                form.rg.data,
-                form.cpf.data,
-                foto_perfil_url,
-                ','.join(fotos_urls) if fotos_urls else '',
-                json.dumps(veiculos) if veiculos else '',
-                form.telefone.data,
-                form.endereco.data,
-                form.anotacoes.data
+                str(abordado_id),  # ID
+                form.nome.data,    # Nome
+                form.nascimento.data,  # Data de Nascimento
+                form.mae.data,     # Nome da Mãe
+                form.pai.data,     # Nome do Pai
+                form.rg.data,      # RG
+                form.cpf.data,     # CPF
+                form.telefone.data,  # Telefone
+                form.endereco.data,  # Endereço
+                foto_perfil_url,   # Foto Perfil
+                ';'.join(fotos_urls) if fotos_urls else '',  # Fotos (usando ; como separador)
+                json.dumps(veiculos) if veiculos else '',  # Veículos
+                form.anotacoes.data  # Anotações
             ]
 
             # Atualizar a linha no Google Sheets
@@ -1255,27 +1301,27 @@ def editar_abordado(abordado_id):
 
         # Preencher o formulário com os dados existentes
         if request.method == 'GET':
-            form.nome.data = abordado[1]
-            form.nascimento.data = abordado[2]
-            form.mae.data = abordado[3]
-            form.pai.data = abordado[4]
-            form.rg.data = abordado[5]
-            form.cpf.data = abordado[6]
-            form.telefone.data = abordado[10] if len(abordado) > 10 else ''
-            form.endereco.data = abordado[11] if len(abordado) > 11 else ''
-            form.anotacoes.data = abordado[12] if len(abordado) > 12 else ''
+            form.nome.data = abordado[1]      # Nome
+            form.nascimento.data = abordado[2] # Data de Nascimento
+            form.mae.data = abordado[3]       # Nome da Mãe
+            form.pai.data = abordado[4]       # Nome do Pai
+            form.rg.data = abordado[5]        # RG
+            form.cpf.data = abordado[6]       # CPF
+            form.telefone.data = abordado[7]  # Telefone
+            form.endereco.data = abordado[8]  # Endereço
+            form.anotacoes.data = abordado[12] if len(abordado) > 12 else ''  # Anotações
 
             # Processar veículos existentes
             veiculos = []
-            if len(abordado) > 9 and abordado[9]:
+            if len(abordado) > 11 and abordado[11]:
                 try:
-                    veiculos = json.loads(abordado[9])
+                    veiculos = json.loads(abordado[11])
                 except:
                     veiculos = []
 
             # Processar fotos existentes
-            foto_perfil = abordado[7] if len(abordado) > 7 else ''
-            fotos = abordado[8].split(',') if len(abordado) > 8 and abordado[8] else []
+            foto_perfil = abordado[9] if len(abordado) > 9 else ''  # Foto Perfil
+            fotos = abordado[10].split(';') if len(abordado) > 10 and abordado[10] else []  # Fotos
 
             return render_template('editar_abordado.html', 
                                 form=form, 
@@ -1285,6 +1331,9 @@ def editar_abordado(abordado_id):
                                 veiculos=veiculos)
 
     except Exception as e:
+        import traceback
+        print(f'ERRO ao editar abordado: {str(e)}')
+        print(f'Traceback: {traceback.format_exc()}')
         flash(f'Erro ao editar abordado: {str(e)}', 'error')
         return redirect(url_for('index'))
 
