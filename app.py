@@ -300,7 +300,7 @@ def get_abordados():
                     'Anotações': row[11] if len(row) > 11 else '',
                     'Parentes': [],  # Lista vazia para manter compatibilidade
                     'Veiculos': [],  # Lista vazia para manter compatibilidade
-                    'Abordagens': get_abordagens_do_abordado(row[0])  # Carregar abordagens
+                    'Abordagens': []  # Inicialmente vazio, será carregado sob demanda
                 }
                 
                 abordados.append(abordado)
@@ -312,6 +312,15 @@ def get_abordados():
     except Exception as e:
         print(f'ERRO ao buscar abordados: {str(e)}')
         return []
+
+@app.route('/get_abordagens/<abordado_id>')
+def get_abordagens(abordado_id):
+    try:
+        abordagens = get_abordagens_do_abordado(abordado_id)
+        return jsonify(abordagens)
+    except Exception as e:
+        print(f'ERRO ao buscar abordagens: {str(e)}')
+        return jsonify([])
 
 def adicionar_abordado(dados):
     try:
@@ -1533,66 +1542,73 @@ def get_abordado(id):
         print(f"Erro ao buscar abordado {id}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-def buscar_abordado_por_id(id):
+def buscar_abordado_por_id(abordado_id):
     try:
-        # Tentar encontrar nos dados em cache primeiro
-        abordados = get_abordados()
-        for abordado in abordados:
-            if abordado['ID'] == id:
-                return {
-                    'id': abordado['ID'],
-                    'nome': abordado['Nome'],
-                    'mae': abordado['Mae'],
-                    'pai': abordado['Pai'],
-                    'foto_perfil': abordado['Foto Perfil']
-                }
-        
-        # Se não encontrar no cache, buscar diretamente
         service = get_google_sheets_service()
-        linha = int(id) + 1
-        result = service.spreadsheets().values().get(
+        sheet = service.spreadsheets()
+        
+        # Buscar a linha do abordado
+        result = sheet.values().get(
             spreadsheetId=SPREADSHEET_ID,
-            range=f'Abordados!A{linha}:M{linha}'
+            range=f'Abordados!A:M'
         ).execute()
         
-        if 'values' in result and result['values']:
-            dados = result['values'][0]
-            return {
-                'id': dados[0],
-                'nome': dados[1],
-                'mae': dados[2],
-                'pai': dados[3],
-                'foto_perfil': dados[9] if len(dados) > 9 else ''
-            }
+        if not result.get('values'):
+            return None
+            
+        # Procurar o abordado pelo ID
+        for row in result.get('values')[1:]:  # Pula o cabeçalho
+            if row and row[0] == str(abordado_id):
+                return {
+                    'id': row[0],
+                    'nome': row[1],
+                    'foto_perfil': row[9] if len(row) > 9 else ''
+                }
+        
         return None
+        
     except Exception as e:
-        print(f"Erro ao buscar abordado {id}: {str(e)}")
+        print(f'ERRO ao buscar abordado por ID {abordado_id}: {str(e)}')
         return None
 
 def get_credentials():
-    creds = None
-    if os.environ.get('GOOGLE_TOKEN'):
-        # Decodifica o token das variáveis de ambiente
-        token_data = base64.b64decode(os.environ.get('GOOGLE_TOKEN'))
-        creds = pickle.loads(token_data)
-    
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            # Carrega as credenciais da variável de ambiente
-            creds_data = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
-            flow = InstalledAppFlow.from_client_config(
-                creds_data,
-                ['https://www.googleapis.com/auth/spreadsheets']
-            )
-            creds = flow.run_local_server(port=0)
+    try:
+        creds = None
         
-        # Salva o token atualizado na variável de ambiente
-        token_bytes = pickle.dumps(creds)
-        os.environ['GOOGLE_TOKEN'] = base64.b64encode(token_bytes).decode('utf-8')
-    
-    return creds
+        # Verificar se as credenciais estão nas variáveis de ambiente
+        google_credentials = os.getenv('GOOGLE_CREDENTIALS')
+        google_token = os.getenv('GOOGLE_TOKEN')
+        
+        if google_credentials and google_token:
+            # Decodificar as credenciais do JSON
+            creds_data = json.loads(google_credentials)
+            
+            # Decodificar o token de base64
+            token_data = base64.b64decode(google_token)
+            creds = pickle.loads(token_data)
+            
+        else:
+            # Usar arquivos locais
+            if os.path.exists('token.pickle'):
+                with open('token.pickle', 'rb') as token:
+                    creds = pickle.load(token)
+                    
+            if not creds or not creds.valid:
+                if creds and creds.expired and creds.refresh_token:
+                    creds.refresh(Request())
+                else:
+                    flow = InstalledAppFlow.from_client_secrets_file(
+                        'credentials.json', SCOPES)
+                    creds = flow.run_local_server(port=0)
+                
+                with open('token.pickle', 'wb') as token:
+                    pickle.dump(creds, token)
+                    
+        return creds
+        
+    except Exception as e:
+        print(f"ERRO ao obter credenciais: {str(e)}")
+        return None
 
 if __name__ == '__main__':
     app.run(debug=True) 

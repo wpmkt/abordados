@@ -470,50 +470,18 @@
                     <!-- Seção de Abordagens -->
                     <div class="abordagens-section mt-4">
                         <div class="d-flex justify-content-between align-items-center mb-3" 
-                             data-bs-toggle="collapse" data-bs-target="#abordagensCollapse{{ loop.index }}">
+                             data-bs-toggle="collapse" data-bs-target="#abordagensCollapse{{ loop.index }}"
+                             onclick="carregarAbordagens('{{ abordado.get('ID') }}', '{{ loop.index }}')">
                             <h6 class="mb-0">Abordagens</h6>
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="collapse" id="abordagensCollapse{{ loop.index }}">
-                            <div class="abordagens-list">
-                                {% if abordado.get('Abordagens') %}
-                                    {% for abordagem in abordado.get('Abordagens') %}
-                                        <div class="abordagem-card mb-3">
-                                            <div class="abordagem-info">
-                                                <div class="abordagem-data">
-                                                    <i class="far fa-calendar"></i>
-                                                    <span>{{ abordagem.get('data_hora', '') }}</span>
-                                                </div>
-                                                <div class="abordagem-local">
-                                                    <i class="fas fa-map-marker-alt"></i>
-                                                    <span>{{ abordagem.get('local', '') }}</span>
-                                                </div>
-                                                {% if abordagem.get('outros_abordados') %}
-                                                    <div class="outros-abordados mt-2">
-                                                        {% for outro in abordagem.get('outros_abordados') %}
-                                                            <div class="outro-abordado d-flex align-items-center mb-2">
-                                                                {% if outro.get('foto_perfil') %}
-                                                                    <img src="{{ outro.get('foto_perfil') }}" 
-                                                                         alt="Foto de {{ outro.get('nome', '') }}"
-                                                                         class="rounded-circle me-2"
-                                                                         style="width: 30px; height: 30px; object-fit: cover;">
-                                                                {% else %}
-                                                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2"
-                                                                         style="width: 30px; height: 30px;">
-                                                                        <i class="fas fa-user text-white"></i>
-                                                                    </div>
-                                                                {% endif %}
-                                                                <span>{{ outro.get('nome', '') }}</span>
-                                                            </div>
-                                                        {% endfor %}
-                                                    </div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <p class="text-muted">Nenhuma abordagem registrada</p>
-                                {% endif %}
+                            <div class="abordagens-list" id="abordagensList{{ loop.index }}">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Carregando...</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -856,6 +824,68 @@
                 abordadoElement.style.opacity = '1';
             });
         }
+    }
+
+    function carregarAbordagens(abordadoId, index) {
+        const abordagensList = document.getElementById(`abordagensList${index}`);
+        
+        // Verificar se as abordagens já foram carregadas
+        if (abordagensList.getAttribute('data-loaded') === 'true') {
+            return;
+        }
+        
+        fetch(`/get_abordagens/${abordadoId}`)
+            .then(response => response.json())
+            .then(abordagens => {
+                let html = '';
+                if (abordagens && abordagens.length > 0) {
+                    abordagens.forEach(abordagem => {
+                        html += `
+                            <div class="abordagem-card mb-3">
+                                <div class="abordagem-info">
+                                    <div class="abordagem-data">
+                                        <i class="far fa-calendar"></i>
+                                        <span>${abordagem.data_hora}</span>
+                                    </div>
+                                    <div class="abordagem-local">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span>${abordagem.local}</span>
+                                    </div>`;
+                        
+                        if (abordagem.outros_abordados && abordagem.outros_abordados.length > 0) {
+                            html += `<div class="outros-abordados mt-2">`;
+                            abordagem.outros_abordados.forEach(outro => {
+                                html += `
+                                    <div class="outro-abordado d-flex align-items-center mb-2">
+                                        ${outro.foto_perfil ? 
+                                            `<img src="${outro.foto_perfil}" 
+                                                  alt="Foto de ${outro.nome}"
+                                                  class="rounded-circle me-2"
+                                                  style="width: 30px; height: 30px; object-fit: cover;">` :
+                                            `<div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2"
+                                                  style="width: 30px; height: 30px;">
+                                                <i class="fas fa-user text-white"></i>
+                                             </div>`
+                                        }
+                                        <span>${outro.nome}</span>
+                                    </div>`;
+                            });
+                            html += `</div>`;
+                        }
+                        
+                        html += `</div></div>`;
+                    });
+                } else {
+                    html = '<p class="text-muted">Nenhuma abordagem registrada</p>';
+                }
+                
+                abordagensList.innerHTML = html;
+                abordagensList.setAttribute('data-loaded', 'true');
+            })
+            .catch(error => {
+                console.error('Erro ao carregar abordagens:', error);
+                abordagensList.innerHTML = '<p class="text-danger">Erro ao carregar abordagens</p>';
+            });
     }
     </script>
 </body>
