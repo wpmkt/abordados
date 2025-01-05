@@ -270,57 +270,23 @@
                     </div>
 
                     <!-- Seção de Fotos -->
-                    <div class="photos-section mt-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3" 
-                             data-bs-toggle="collapse" data-bs-target="#photoCollapse{{ loop.index }}" 
-                             style="cursor: pointer;">
-                            <h6 class="section-title mb-0">
-                                <i class="fas fa-images me-2"></i>Fotos
-                            </h6>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                        <div id="photoCollapse{{ loop.index }}" class="collapse">
-                            {% if abordado.get('Fotos') %}
+                    <div class="fotos-section">
+                        <h6 class="mb-2">
+                            <i class="fas fa-camera"></i> Fotos
+                            <button class="btn btn-link btn-sm float-end" type="button" data-bs-toggle="collapse" data-bs-target="#fotos{{ abordado.get('ID', '') }}" aria-expanded="false">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </h6>
+                        <div class="collapse" id="fotos{{ abordado.get('ID', '') }}">
                             <div class="row g-2">
-                                {% set outer_loop = loop %}
-                                {% for foto in abordado.get('Fotos').split(';') if foto %}
-                                <div class="col-6 col-md-4 col-lg-3">
-                                    <div class="position-relative">
-                                        <img src="{{ foto }}" alt="Foto" class="img-fluid rounded photo-thumbnail"
-                                             style="width: 100%; height: 150px; object-fit: cover; cursor: pointer;"
-                                             data-bs-toggle="modal" data-bs-target="#photoModal{{ loop.index }}_{{ outer_loop.index }}">
-                                        <div class="photo-actions position-absolute" style="top: 5px; right: 5px;">
-                                            <a href="{{ foto }}" download="foto_{{ outer_loop.index }}_{{ loop.index }}.jpg" 
-                                               class="btn btn-sm btn-light me-1" title="Download">
-                                                <i class="fas fa-download"></i>
-                                            </a>
-                                            <button class="btn btn-sm btn-danger" title="Deletar" 
-                                                    onclick="deletePhoto('{{ foto }}', '{{ abordado.get('ID', '') }}')">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Modal específico para cada foto -->
-                                <div class="modal fade" id="photoModal{{ loop.index }}_{{ outer_loop.index }}" tabindex="-1">
-                                    <div class="modal-dialog modal-lg modal-dialog-centered">
-                                        <div class="modal-content">
-                                            <div class="modal-body p-0">
-                                                <button type="button" class="btn-close position-absolute end-0 top-0 m-2" 
-                                                        data-bs-dismiss="modal" aria-label="Close" style="z-index: 1050; background-color: white;"></button>
-                                                <img src="{{ foto }}" alt="Foto ampliada" class="img-fluid w-100">
-                                            </div>
-                                        </div>
-                                    </div>
+                                {% for foto in abordado.get('Fotos', []) %}
+                                <div class="col-4">
+                                    <a href="{{ foto }}" target="_blank">
+                                        <img src="{{ foto }}" class="img-fluid rounded" alt="Foto">
+                                    </a>
                                 </div>
                                 {% endfor %}
                             </div>
-                            {% else %}
-                            <div class="text-muted">
-                                <i class="fas fa-info-circle me-2"></i>Nenhuma foto adicional registrada
-                            </div>
-                            {% endif %}
                         </div>
                     </div>
 
